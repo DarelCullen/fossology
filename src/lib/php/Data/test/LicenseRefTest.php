@@ -19,7 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Data;
 
-class LicenseRefTest extends \PHPUnit_Framework_TestCase
+class LicenseRefTest extends \PHPUnit\Framework\TestCase
 {
   private $id = 321;
   private $shortName = "<shortName>";
@@ -49,6 +49,4 @@ class LicenseRefTest extends \PHPUnit_Framework_TestCase
   {
     assertThat($this->licenseRef->getFullName(), is($this->fullName));
   }
-
 }
- 

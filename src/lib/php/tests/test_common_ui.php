@@ -27,7 +27,7 @@ require_once(dirname(__FILE__) . '/../common-ui.php');
 /**
  * \class test_common_dir
  */
-class test_common_ui extends \PHPUnit_Framework_TestCase
+class test_common_ui extends \PHPUnit\Framework\TestCase
 {
   /* initialization */
   protected function setUp()
@@ -57,5 +57,4 @@ class test_common_ui extends \PHPUnit_Framework_TestCase
     $result = HumanSize(1024 * (1024 * 99 + 511));
     $this->assertEquals("99.5 MB", $result);
   }
-
 }

@@ -10,25 +10,35 @@
 FileName: {{ fileName }}
 SPDXID: SPDXRef-item{{ fileId }}
 {# FileType: OTHER #}
-FileChecksum: SHA1: {{ sha1 }}
-FileChecksum: MD5: {{ md5 }}
-{% if concludedLicenses is empty %}
-LicenseConcluded: NOASSERTION
+FileChecksum: SHA1: {{ sha1 | lower }}
+FileChecksum: MD5: {{ md5 | lower }}
+{% if isCleared %}
+{% if concludedLicenses|default is empty %}
+LicenseConcluded: NONE
 {% else %}
-LicenseConcluded: (LicenseRef-{{ concludedLicenses|join('UNIQUESTRINGTOREPLACE')
-                                                  |replace({' ':'-'})
-                                                  |replace({'UNIQUESTRINGTOREPLACE':' OR LicenseRef-'}) }})
+LicenseConcluded: {{ concludedLicense }}
+{% endif%}
+{% else %}
+LicenseConcluded: NOASSERTION
 {% endif %}
-{% if scannerLicenses is empty %}
+{% if licenseCommentState %}
+{% if licenseComment is not empty %}
+LicenseComments: <text>{{ licenseComment |replace({'<text>':'&lt;text&gt;','</text>':'&lt;/text&gt;'})
+                                         |replace({'\f':''}) }} </text>
+{% endif %}
+{% endif %}
+{% if scannerLicenses|default is empty %}
 LicenseInfoInFile: NOASSERTION
 {% else %}
 {% for lic in  scannerLicenses %}
-LicenseInfoInFile: LicenseRef-{{ lic|replace({' ':'-'})}}
+LicenseInfoInFile: {{ lic|replace({' ':'-'})}}
 {% endfor %}
 {% endif %}
 {# FileSize: 48 Kb (49173 bytes) #}
-{% if copyrights is empty %}
+{% if copyrights|default is empty %}
 FileCopyrightText: NOASSERTION
 {% else %}
-FileCopyrightText: {{ copyrights|join('\n')|replace({'\f':''}) }}
-{% endif %}
+FileCopyrightText: <text> {{ copyrights|join('\n')
+                                       |replace({'<text>':'&lt;text&gt;','</text>':'&lt;/text&gt;'})
+                                       |replace({'\f':''}) }} </text>
+{% endif %} 

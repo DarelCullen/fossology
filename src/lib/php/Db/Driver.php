@@ -97,19 +97,26 @@ interface Driver
    * @return mixed
    */
   public function booleanToDb($booleanValue);
-  
+
   /**
    * @param string
    * @return string
    */
   public function escapeString($string);
-  
+
   /**
    * @param string $tableName
    * @return bool
    */
   public function existsTable($tableName);
-  
+
+  /**
+   * @param $tableName
+   * @param $columnName
+   * @return bool
+   */
+  public function existsColumn($tableName, $columnName);
+
   /**
    * @param string $stmt
    * @param string $sql

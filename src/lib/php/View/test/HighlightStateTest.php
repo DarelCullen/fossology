@@ -19,12 +19,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\View;
 
+class HighlightStateTest extends \PHPUnit\Framework\TestCase
+{
 
-class HighlightStateTest extends \PHPUnit_Framework_TestCase {
-
-  public function testBla() {
+  public function testBla()
+  {
     $highlightState = new HighlightState(new HighlightRenderer());
   }
-
 }
- 

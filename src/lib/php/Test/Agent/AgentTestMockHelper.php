@@ -2,8 +2,6 @@
 
 namespace Fossology\Lib\Agent;
 
-use Fossology\Lib\Util\Object;
-
 function cli_Init()
 {
 }
@@ -14,14 +12,19 @@ function getopt($arg1, $arg2)
   global $jobId;
   global $groupId;
   global $extraOpts;
-  
-  if (!is_array($extraOpts))
-  {
+
+  if (! is_array($extraOpts)) {
     $extraOpts = array();
   }
 
-  $opts = array_merge(array("scheduler_start" => "", "userID" => $userId, "jobId" => $jobId, "groupID" => $groupId), $extraOpts);
-  
+  $opts = array_merge(
+    array(
+      "scheduler_start" => "",
+      "userID" => $userId,
+      "jobId" => $jobId,
+      "groupID" => $groupId
+    ), $extraOpts);
+
   return $opts;
 }
 
@@ -32,8 +35,10 @@ function fgets($in)
   return $fgetsMock->fgets($in);
 }
 
-class FgetsMock extends Object
+class FgetsMock
 {
-  function fgets($in) {}
+  function fgets($in)
+  {
+  }
 }
 

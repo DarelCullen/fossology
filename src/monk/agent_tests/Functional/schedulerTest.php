@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2015,2019 Siemens AG
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -30,8 +30,7 @@ use Fossology\Lib\Test\TestInstaller;
 use Fossology\Lib\Test\TestPgDb;
 use Monolog\Logger;
 
-
-class MonkScheduledTest extends PHPUnit_Framework_TestCase
+class MonkScheduledTest extends \PHPUnit\Framework\TestCase
 {
   /** @var TestPgDb */
   private $testDb;
@@ -58,7 +57,7 @@ class MonkScheduledTest extends PHPUnit_Framework_TestCase
 
     $this->licenseDao = new LicenseDao($this->dbManager);
     $logger = new Logger("SchedulerTest");
-    $this->uploadPermDao = \Mockery::mock(UploadPermissionDao::classname());
+    $this->uploadPermDao = \Mockery::mock(UploadPermissionDao::class);
     $this->uploadDao = new UploadDao($this->dbManager, $logger, $this->uploadPermDao);
     $this->highlightDao = new HighlightDao($this->dbManager);
     $this->clearingDao = new ClearingDao($this->dbManager, $this->uploadDao);
@@ -121,7 +120,7 @@ class MonkScheduledTest extends PHPUnit_Framework_TestCase
     $this->testDb->alterTables(array('agent','pfile','upload','ars_master','license_ref_bulk','license_set_bulk','clearing_event','license_file','highlight','clearing_decision'),false);
     $this->testDb->createInheritedTables();
     $this->testDb->insertData(array('pfile','upload','uploadtree_a','users'), false);
-    $this->testDb->insertData_license_ref();
+    $this->testDb->insertData_license_ref(200);
   }
 
   private function getHeartCount($output)

@@ -19,14 +19,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 namespace Fossology\Lib\Proxy;
 
 use Fossology\Lib\Data\AgentRef;
-use Fossology\Lib\Util\Object;
 use Fossology\Lib\Dao\AgentDao;
 
 /**
  * Class AgentDao
  * @package Fossology\Lib\Dao
  */
-class ScanJobProxy extends Object
+class ScanJobProxy
 {
   const ARS_TABLE_SUFFIX = "_ars";
 
@@ -46,36 +45,32 @@ class ScanJobProxy extends Object
     $this->agentDao = $agentDao;
     $this->uploadId = $uploadId;
   }
-  
+
   public function getSuccessfulAgents()
   {
     $successfulAgents = array();
-    foreach ($this->successfulScanners as $scanAgents)
-    {
+    foreach ($this->successfulScanners as $scanAgents) {
       $successfulAgents = array_merge($successfulAgents, $scanAgents);
     }
     return $successfulAgents;
   }
-  
+
   public function getLatestSuccessfulAgentIds()
   {
     $agentIds = array();
-    foreach ($this->successfulScanners as $agentName=>$scanAgents)
-    {
+    foreach ($this->successfulScanners as $agentName=>$scanAgents) {
       $agentRef = $scanAgents[0];
       $agentIds[$agentName] = $agentRef->getAgentId();
     }
     return $agentIds;
   }
-  
+
   public function createAgentStatus($scannerAgents)
   {
     $scannerVars = array();
-    foreach ($scannerAgents as $agentName)
-    {
+    foreach ($scannerAgents as $agentName) {
       $agentHasArsTable = $this->agentDao->arsTableExists($agentName);
-      if (empty($agentHasArsTable))
-      {
+      if (empty($agentHasArsTable)) {
         continue;
       }
       $scannerVars[] = $this->scanAgentStatus($agentName);
@@ -84,15 +79,14 @@ class ScanJobProxy extends Object
   }
 
   public function getAgentMap()
-  {        
+  {
     $agentMap = array();
-    foreach ($this->getSuccessfulAgents() as $agent)
-    {
+    foreach ($this->getSuccessfulAgents() as $agent) {
       $agentMap[$agent->getAgentId()] = $agent->getAgentName() . " " . $agent->getAgentRevision();
     }
     return $agentMap;
   }
-  
+
   /**
    * @brief get status var and store successfulAgents
    * @param string $agentName
@@ -104,28 +98,24 @@ class ScanJobProxy extends Object
     $vars['successfulAgents'] = $successfulAgents;
     $vars['uploadId'] = $this->uploadId;
     $vars['agentName'] = $agentName;
-   
-    if (!count($successfulAgents))
-    {
+
+    if (!count($successfulAgents)) {
       $vars['isAgentRunning'] = count($this->agentDao->getRunningAgentIds($this->uploadId, $agentName)) > 0;
       return $vars;
-    }  
-    
+    }
+
     $latestSuccessfulAgent = $successfulAgents[0];
     $currentAgentRef = $this->agentDao->getCurrentAgentRef($agentName);
     $vars['currentAgentId'] = $currentAgentRef->getAgentId();
     $vars['currentAgentRev'] = $currentAgentRef->getAgentRevision();
-    if ($currentAgentRef->getAgentId() != $latestSuccessfulAgent['agent_id'])
-    {
+    if ($currentAgentRef->getAgentId() != $latestSuccessfulAgent['agent_id']) {
       $runningJobs = $this->agentDao->getRunningAgentIds($this->uploadId, $agentName);
       $vars['isAgentRunning'] = in_array($currentAgentRef->getAgentId(), $runningJobs);
     }
 
-    foreach ($successfulAgents as $agent)
-    {
+    foreach ($successfulAgents as $agent) {
       $this->successfulScanners[$agentName][] = new AgentRef($agent['agent_id'], $agentName, $agent['agent_rev']);
     }
     return $vars;
   }
-  
-} 
+}

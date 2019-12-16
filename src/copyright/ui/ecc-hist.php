@@ -19,24 +19,29 @@
 
 require_once('HistogramBase.php');
 
-define("TITLE_eccHistogram", _("Export restriction Browser"));
+define("TITLE_ECCHISTOGRAM", _("Export restriction Browser"));
 
+/**
+ * @class EccHistogram
+ * @brief Create UI plugin for ecc agent
+ */
 class EccHistogram  extends HistogramBase {
   function __construct()
   {
     $this->Name = "ecc-hist";
-    $this->Title = TITLE_eccHistogram;
+    $this->Title = TITLE_ECCHISTOGRAM;
     $this->viewName = "ecc-view";
     $this->agentName = "ecc";
     parent::__construct();
   }
-  
+
   /**
-   * @param $upload_pk
-   * @param $Uploadtree_pk
-   * @param $filter
-   * @param $Agent_pk
-   * @return array
+   * @brief Get contents for ecc table
+   * @param int    $upload_pk     Upload id for fetch request
+   * @param int    $Uploadtree_pk Upload tree id of the item
+   * @param string $filter        Filter to apply for query
+   * @param int    $Agent_pk      Agent id which populate the result
+   * @return array Ecc contents, upload tree items in result
    */
   protected  function getTableContent($upload_pk, $Uploadtree_pk, $filter, $Agent_pk)
   {
@@ -50,12 +55,8 @@ class EccHistogram  extends HistogramBase {
   }
 
   /**
-   * @param $upload_pk
-   * @param $Uploadtree_pk
-   * @param $filter
-   * @param $agentId
-   * @param $VF
-   * @return string
+   * @copydoc HistogramBase::fillTables()
+   * @see HistogramBase::fillTables()
    */
   protected function fillTables($upload_pk, $Uploadtree_pk, $filter, $agentId, $VF)
   {
@@ -68,6 +69,10 @@ class EccHistogram  extends HistogramBase {
     return array($V,$tableVars);
   }
 
+  /**
+   * @copydoc FO_Plugin::RegisterMenus()
+   * @see FO_Plugin::RegisterMenus()
+   */
   function RegisterMenus()
   {
     // For all other menus, permit coming back here.
@@ -78,7 +83,7 @@ class EccHistogram  extends HistogramBase {
     {
       if (GetParm("mod",PARM_STRING) == $this->Name)
       {
-        menu_insert("Browse::ECC",1);
+        menu_insert("Browse::ECC",10);
         menu_insert("Browse::[BREAK]",100);
       }
       else
@@ -89,6 +94,10 @@ class EccHistogram  extends HistogramBase {
     }
   } // RegisterMenus()
 
+  /**
+   * @copydoc HistogramBase::createScriptBlock()
+   * @see HistogramBase::createScriptBlock()
+   */
   protected  function createScriptBlock()
   {
     return "
@@ -104,4 +113,3 @@ class EccHistogram  extends HistogramBase {
 }
 
 $NewPlugin = new EccHistogram;
-//$NewPlugin->Initialize();

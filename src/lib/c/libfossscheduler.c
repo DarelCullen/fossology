@@ -18,7 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 ***************************************************************/
 
 /*!
- * \file libfossscheduler.c
+ * \file
  * \brief Scheduler API for agents.
 */
 
@@ -31,31 +31,35 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <stdio.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <glib.h>
 
 /* ************************************************************************** */
 /* **** Locals ************************************************************** */
 /* ************************************************************************** */
 
-int items_processed; ///< the number of items processed by the agent
-char buffer[2048];    ///< the last thing received from the scheduler
-int alive;           ///< if the agent has updated with a hearbeat
-int valid;           ///< if the information stored in buffer is valid
-int sscheduler;      ///< whether the agent was started by the scheduler
-int userID;          ///< the id of the user that created the job
-int groupID;         ///< the id of the group of the user that created the job
-int jobId;           ///< the id of the job
-char* module_name;     ///< the name of the agent
+volatile gint items_processed; ///< The number of items processed by the agent
+volatile int alive;            ///< If the agent has updated with a hearbeat
+char buffer[2048];   ///< The last thing received from the scheduler
+int valid;           ///< If the information stored in buffer is valid
+int sscheduler;      ///< Whether the agent was started by the scheduler
+int userID;          ///< The id of the user that created the job
+int groupID;         ///< The id of the group of the user that created the job
+int jobId;           ///< The id of the job
+char* module_name = NULL;   ///< The name of the agent
 
+/** Check for an agent in DB */
 const static char* sql_check = "\
   SELECT * FROM agent \
     WHERE agent_name = '%s' AND agent_rev='%s.%s'";
 
+/** Insert new agent in DB */
 const static char* sql_insert = "\
   INSERT INTO agent (agent_name, agent_rev, agent_desc) \
     VALUES ('%s', '%s.%s', '%s')";
 
-/* system configuration settings */
+/** System configuration settings */
 fo_conf* sysconfig = NULL;
+/** System configuration directory */
 char* sysconfigdir = NULL;
 
 /* these will be freed in fo_scheduler_disconnect */
@@ -74,14 +78,17 @@ int agent_verbose;
 /**
 * @brief Internal function to send a heartbeat to the
 * scheduler along with the number of items processed.
-* Agents should NOT call this function directly.
-*
-* This is the alarm SIGALRM function.
+ *
+ * \note Agents should NOT call this function directly.
+ * \note This is the alarm SIGALRM function.
 * @return void
+ * @todo These functions are not safe for a signal handler
 */
 void fo_heartbeat()
 {
-  fprintf(stdout, "HEART: %d %d\n", items_processed, alive);
+  int processed = g_atomic_int_get(&items_processed);
+  // TODO these functions are not safe for a signal handler
+  fprintf(stdout, "HEART: %d %d\n", processed, alive);
   fflush(stdout);
   fflush(stderr);
   alarm(ALARM_SECS);
@@ -156,13 +163,21 @@ void fo_check_agentdb(PGconn* db_conn)
 */
 void fo_scheduler_heart(int i)
 {
-  items_processed += i;
+  g_atomic_int_add(&items_processed, i);
   alive = TRUE;
 
   fflush(stdout);
   fflush(stderr);
 }
 
+/**
+ * @brief Establish a connection between an agent and the scheduler.
+ * @param[in] argc     Command line agrument count
+ * @param[in] argv     Command line agrument vector
+ * @param[out] db_conn DB Connection
+ * @param[out] db_conf DB conf file
+ * @sa fo_scheduler_connect()
+ */
 void fo_scheduler_connect_conf(int* argc, char** argv, PGconn** db_conn, char** db_conf)
 {
   /* locals */
@@ -318,6 +333,11 @@ void fo_scheduler_connect(int* argc, char** argv, PGconn** db_conn)
   fo_scheduler_connect_conf(argc, argv, db_conn, NULL);
 }
 
+/**
+ * @brief Make a connection from an agent to the scheduler and create a DB
+ * manager as well.
+ * @param[out] dbManager New DB manager
+ */
 void fo_scheduler_connect_dbMan(int* argc, char** argv, fo_dbManager** dbManager)
 {
   char* dbConf;
@@ -333,26 +353,29 @@ void fo_scheduler_connect_dbMan(int* argc, char** argv, fo_dbManager** dbManager
 * Making a call to this function should be the last thing that an agent does
 * before exiting. Any error reporting to stdout or stderr will not work after
 * this function has finished execution.
+* @param retcode Return code to the scheduler
 */
 void fo_scheduler_disconnect(int retcode)
 {
-  /* send "CLOSED" to the scheduler */
-  if (sscheduler)
-  {
-    fo_heartbeat();
-    fprintf(stdout, "\nBYE %d\n", retcode);
-    fflush(stdout);
+  if (module_name != NULL) {
+    /* send "CLOSED" to the scheduler */
+    if (sscheduler)
+    {
+      fo_heartbeat();
+      fprintf(stdout, "\nBYE %d\n", retcode);
+      fflush(stdout);
 
-    valid = 0;
-    sscheduler = 0;
+      valid = 0;
+      sscheduler = 0;
 
-    g_free(module_name);
+      g_free(module_name);
+    }
+
+    if (strcmp(sysconfigdir, DEFAULT_SETUP))
+      g_free(sysconfigdir);
+
+    fo_config_free(sysconfig);
   }
-
-  if (strcmp(sysconfigdir, DEFAULT_SETUP))
-    g_free(sysconfigdir);
-
-  fo_config_free(sysconfig);
   g_regex_unref(fo_conf_parse);
   g_regex_unref(fo_conf_replace);
 
@@ -360,6 +383,7 @@ void fo_scheduler_disconnect(int retcode)
   sysconfig = NULL;
   fo_conf_parse = NULL;
   fo_conf_replace = NULL;
+  module_name = NULL;
 
   fflush(stdout);
   fflush(stderr);
@@ -367,6 +391,7 @@ void fo_scheduler_disconnect(int retcode)
 
 /**
 * @brief Get the next data to process from the scheduler.
+*
 * It is the job of the agent to decide how this string is
 * interpreted.
 *
@@ -438,7 +463,7 @@ char* fo_scheduler_next()
 * @brief Get the last read string from the scheduler.
 *
 * @return Returns the string buffer if it is valid.
-* If it is not valid, return NULL
+* If it is not valid, return NULL.
 * The buffer is not valid if the last received data from the scheduler
 * was a command, rather than data to operate on.
 */
@@ -451,7 +476,7 @@ char* fo_scheduler_current()
 * @brief Sets something special about the agent within the scheduler.
 *
 * Possible Options:
-*   SPECIAL_NOKILL: instruct the scheduler to not kill the agent
+*   `SPECIAL_NOKILL`: instruct the scheduler to not kill the agent
 *
 * @param option  the option to set
 * @param value   whether to set the option to true or false
@@ -466,10 +491,10 @@ void fo_scheduler_set_special(int option, int value)
 * @brief Gets if a particular special attribute is set in the scheduler.
 *
 * Possible Options:
-*   SPECIAL_NOKILL   : the agent will not be killed if it stops updating status
-*   SPECIAL_EXCLUSIVE: the agent cannot run simultatiously with any other agent
-*   SPECIAL_NOEMAIL  : the scheduler will not send notification emails for this agent
-*   SPECIAL_LOCAL    : the agent is required to run on the same machine as the scheduler
+* - `SPECIAL_NOKILL`   : the agent will not be killed if it stops updating status
+* - `SPECIAL_EXCLUSIVE`: the agent cannot run simultaneously with any other agent
+* - `SPECIAL_NOEMAIL`  : the scheduler will not send notification emails for this agent
+* - `SPECIAL_LOCAL`    : the agent is required to run on the same machine as the scheduler
 *
 * @param option  the relevant option to the get the value of
 * @return  if the value of the special option was true

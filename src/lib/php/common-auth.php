@@ -18,23 +18,23 @@
  ***********************************************************/
 
 /**
- * \file common-auth.php
- * \brief This file contains common authentication funtion
+ * \file
+ * \brief This file contains common authentication function
  */
 
 
 /**
  * \brief Check if SiteMinder is enabled.
- *  Note that this can be used for other authentication agents by changing
+ *
+ * \note This can be used for other authentication agents by changing
  *  $IDEnvVar
  * \return -1 if not enabled, or the users SEA if enabled
  */
-function siteminder_check() 
+function siteminder_check()
 {
   // $IDEnvVar = 'HPPF_AUTH_UID';  // for example for PingIdentity
   $IDEnvVar = 'HTTP_SMUNIVERSALID';
-  if (isset($_SERVER[$IDEnvVar]))
-  {
+  if (isset($_SERVER[$IDEnvVar])) {
     $SEA = $_SERVER[$IDEnvVar];
     return $SEA;
   }
@@ -42,39 +42,45 @@ function siteminder_check()
 } // siteminder_check()
 
 /**
- * \brief check if this account is correct 
+ * \brief Check if this account is correct
  *
- * \param &$user - user name, reference variable
- * \param &$passwd - password, reference variable
- * 
- * \return error: exit (1)
+ * \param string &$user   User name, reference variable
+ * \param string &$passwd Password, reference variable
+ * \param string &$group  Group, reference variable (optional)
+ *
+ * \return User id on success, exit(1) on failure.
  */
 function account_check(&$user, &$passwd, &$group = "")
 {
   global $SysConf;
   $dbManager = $GLOBALS['container']->get('db.manager');
-  /** get username/passwd from ~/.fossology.rc */
+  /* get username/passwd from ~/.fossology.rc */
   $user_passwd_file = getenv("HOME") . "/.fossology.rc";
   if (empty($user) && empty($passwd) && file_exists($user_passwd_file)) {
     $user_passwd_array = parse_ini_file($user_passwd_file, true, INI_SCANNER_RAW);
 
     /* get username and password from conf file */
-    if(!empty($user_passwd_array) && !empty($user_passwd_array['user']))
+    if (! empty($user_passwd_array) && ! empty($user_passwd_array['user'])) {
       $user = $user_passwd_array['user'];
-    if(!empty($user_passwd_array) && !empty($user_passwd_array['username']))
+    }
+    if (! empty($user_passwd_array) && ! empty($user_passwd_array['username'])) {
       $user = $user_passwd_array['username'];
-    if(!empty($user_passwd_array) && !empty($user_passwd_array['groupname']))
+    }
+    if (! empty($user_passwd_array) && ! empty($user_passwd_array['groupname'])) {
       $group = $user_passwd_array['groupname'];
-    if(!empty($user_passwd_array) && !empty($user_passwd_array['password']))
+    }
+    if (! empty($user_passwd_array) && ! empty($user_passwd_array['password'])) {
       $passwd = $user_passwd_array['password'];
+    }
   }
   /* check if the user name/passwd is valid */
   if (empty($user)) {
     /*
-       $uid_arr = posix_getpwuid(posix_getuid());
-       $user = $uid_arr['name'];
+     * $uid_arr = posix_getpwuid(posix_getuid());
+     * $user = $uid_arr['name'];
      */
-    echo "FATAL: You should add '--username USERNAME' when running OR add 'username=USERNAME' in ~/.fossology.rc before running.\n";
+    echo "FATAL: You should add '--username USERNAME' when running OR add " .
+      "'username=USERNAME' in ~/.fossology.rc before running.\n";
     exit(1);
   }
   if (empty($passwd)) {
@@ -87,11 +93,11 @@ function account_check(&$user, &$passwd, &$group = "")
     }
   }
 
-  if (!empty($user)) {
+  if (! empty($user)) {
     $userDao = $GLOBALS['container']->get('dao.user');
     try {
       $row = $userDao->getUserAndDefaultGroupByUserName($user);
-    }catch (Exception $e) {
+    } catch (Exception $e) {
       echo $e->getMessage(), "\n";
       exit(1);
     }
@@ -101,15 +107,12 @@ function account_check(&$user, &$passwd, &$group = "")
     if (empty($group)) {
       $group = $row['group_name'];
       $groupId = $row['group_fk'];
-    }
-    else {
+    } else {
       $rowGroup = $dbManager->getSingleRow(
         "SELECT group_pk
         FROM group_user_member INNER JOIN groups ON groups.group_pk = group_user_member.group_fk
-        WHERE user_fk = $1 AND group_name = $2",
-        array($userId, $group),
-        __METHOD__.".lookUpGroup"
-      );
+        WHERE user_fk = $1 AND group_name = $2", array($userId, $group),
+        __METHOD__ . ".lookUpGroup");
       if (false === $rowGroup) {
         echo "User is not in group.\n";
         exit(1);
@@ -122,7 +125,7 @@ function account_check(&$user, &$passwd, &$group = "")
       exit(1);
     }
 
-    if (!empty($row['user_seed']) && !empty($row['user_pass'])) {
+    if (! empty($row['user_seed']) && ! empty($row['user_pass'])) {
       $passwd_hash = sha1($row['user_seed'] . $passwd);
       if (strcmp($passwd_hash, $row['user_pass']) != 0) {
         echo "User name or password is invalid.\n";
@@ -134,11 +137,11 @@ function account_check(&$user, &$passwd, &$group = "")
 }
 
 /**
- * \brief check if the user has the permission to read the 
+ * \brief Check if the user has the permission to read the
  * copyright/license/etc information of this upload
- * 
- * \param $upload - upload id
- * \param $user - user name
+ *
+ * \param int    $upload Upload id
+ * \param string $user   User name
  *
  * \return 1: has the permission; 0: no permission
  */
@@ -147,7 +150,7 @@ function read_permission($upload, $user)
   $ADMIN_PERMISSION = 10;
   $dbManager = $GLOBALS['container']->get('db.manager');
 
-  /** check if the user if the owner of this upload */
+  /* check if the user if the owner of this upload */
   $row = $dbManager->getSingleRow(
     "SELECT 1
     FROM upload INNER JOIN users ON users.user_pk = upload.user_fk
@@ -156,12 +159,12 @@ function read_permission($upload, $user)
     __METHOD__.".checkUpload"
   );
 
-  if (!empty($row)) {
-    /** user has permission */
+  if (! empty($row)) {
+    /* user has permission */
     return 1;
   }
 
-  /** check if the user is administrator */
+  /* check if the user is administrator */
   $row = $dbManager->getSingleRow(
     "SELECT 1
     FROM users
@@ -170,12 +173,12 @@ function read_permission($upload, $user)
     __METHOD__.".checkPerm"
   );
 
-  if (!empty($row)) {
-    /** user has permission */
+  if (! empty($row)) {
+    /* user has permission */
     return 1;
   }
 
-  /** user does not have permission */
+  /* user does not have permission */
   return 0;
 }
-  
+

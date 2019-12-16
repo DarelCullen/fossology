@@ -17,8 +17,21 @@
 ***********************************************************/
 
 /**
- * \file common.php
+ * @dir
+ * @brief Common library functions for agents based on PHP language
+ * \file
  * \brief These are common functions to be used by anyone.
+ * @page libphp FOSSology PHP library
+ * @tableofcontents
+ *
+ * @section libphpabout About
+ * This is library contains common utility functions for FOSSology agents
+ * written in PHP language.
+ *
+ * The library is modular. Include @link common.php @endlink to include all
+ * library functionalities.
+ * @section libphpsource Library source
+ * - @link src/lib/php @endlink
  */
 
 // setup autoloading
@@ -53,7 +66,6 @@ require_once("common-users.php");
 require_once("common-string.php");
 /* Only include the command-line interface functions if it is required. */
 global $UI_CLI;
-if (!empty($UI_CLI) && ($UI_CLI == 1))
-{
-  require_once("common-cli.php");
+if (! empty($UI_CLI) && ($UI_CLI == 1)) {
+  require_once ("common-cli.php");
 }

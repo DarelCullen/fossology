@@ -18,9 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Proxy;
 
-use Fossology\Lib\Util\Object;
-
-class DbViewProxy extends Object
+class DbViewProxy
 {
   /** @var string */
   protected $dbViewName;
@@ -52,8 +50,7 @@ class DbViewProxy extends Object
    */
   public function materialize()
   {
-    if ($this->materialized)
-    {
+    if ($this->materialized) {
       return;
     }
     global $container;
@@ -67,8 +64,7 @@ class DbViewProxy extends Object
    */
   public function unmaterialize()
   {
-    if (!$this->materialized)
-    {
+    if (!$this->materialized) {
       return;
     }
     global $container;
@@ -90,5 +86,4 @@ class DbViewProxy extends Object
   {
     return $this->dbViewQuery;
   }
-
 }

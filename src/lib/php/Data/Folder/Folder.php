@@ -18,10 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Data\Folder;
 
-
-use Fossology\Lib\Util\Object;
-
-class Folder extends Object {
+class Folder
+{
 
   /** @var int */
   private $id;
@@ -41,7 +39,8 @@ class Folder extends Object {
    * @param string $description
    * @param int $permissions
    */
-  public function __construct($id, $name, $description, $permissions) {
+  public function __construct($id, $name, $description, $permissions)
+  {
     $this->id = $id;
     $this->name = $name;
     $this->description = $description;
@@ -79,6 +78,4 @@ class Folder extends Object {
   {
     return $this->permissions;
   }
-
-
-} 
+}

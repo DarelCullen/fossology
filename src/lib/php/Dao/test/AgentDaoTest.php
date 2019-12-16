@@ -24,7 +24,8 @@ use Fossology\Lib\Test\TestPgDb;
 use Mockery as M;
 use Monolog\Logger;
 
-class AgentDaoTest extends \PHPUnit_Framework_TestCase {
+class AgentDaoTest extends \PHPUnit\Framework\TestCase
+{
 
   private $uploadId = 25;
   private $olderAgentId = 3;
@@ -66,13 +67,14 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
   /** @var AgentRef */
   private $incompleteAgent;
 
-  protected function setUp() {
-    $this->dbManager = M::mock(DbManager::classname());
+  protected function setUp()
+  {
+    $this->dbManager = M::mock(DbManager::class);
     $this->logger = M::mock('Monolog\Logger');
 
     $this->testDb = new TestPgDb();
     $this->dbManager = &$this->testDb->getDbManager();
-    
+
     $this->agent = new AgentRef($this->agentId, $this->agentName, $this->agentRev);
     $this->olderAgent = new AgentRef($this->olderAgentId, $this->agentName, $this->olderAgentRev);
     $this->otherAgent = new AgentRef($this->otherAgentId, $this->otherAgentName, $this->otherAgentRev);
@@ -89,8 +91,7 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
         array($this->agentId, $this->agentName, $this->agentRev, $this->agentDesc, $this->dbManager->booleanToDb($this->agentEnabled)),
         array($this->incompleteAgentId, $this->agentName, $this->incompleteAgentRev, $this->agentDesc, $this->dbManager->booleanToDb($this->agentEnabled)),
     );
-    foreach ($agentArray as $agentRow)
-    {
+    foreach ($agentArray as $agentRow) {
       $this->dbManager->insertInto('agent', 'agent_pk, agent_name, agent_rev, agent_desc, agent_enabled', $agentRow);
     }
     $this->agentsDao = new AgentDao($this->dbManager, $this->logger);
@@ -102,8 +103,7 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
       array(2, $this->agentId, $this->uploadId, $this->dbManager->booleanToDb(true)),
       array(3, $this->incompleteAgentId, $this->uploadId, $this->dbManager->booleanToDb(false))
     );
-    foreach ($arsArray as $arsRow)
-    {
+    foreach ($arsArray as $arsRow) {
       $this->dbManager->insertInto($arsTableName, 'ars_pk, agent_fk, upload_fk, ars_success', $arsRow);
     }
 
@@ -112,13 +112,13 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
     $arsArray = array(
         array(1, $this->otherAgentId, $this->uploadId, $this->dbManager->booleanToDb(true)),
     );
-    foreach ($arsArray as $arsRow)
-    {
+    foreach ($arsArray as $arsRow) {
       $this->dbManager->insertInto($arsTableName, 'ars_pk, agent_fk, upload_fk, ars_success', $arsRow);
     }
   }
 
-  protected function tearDown() {
+  protected function tearDown()
+  {
     $this->dbManager->queryOnce("drop table " . $this->agentName . AgentDao::ARS_TABLE_SUFFIX);
     $this->dbManager->queryOnce("drop table " . $this->otherAgentName . AgentDao::ARS_TABLE_SUFFIX);
 
@@ -144,9 +144,9 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
   {
     global $container;
     $container = M::mock('ContainerBuilder');
-    $this->dbManagerMock = M::mock(DbManager::classname());
+    $this->dbManagerMock = M::mock(DbManager::class);
     $container->shouldReceive('get')->withArgs(array('db.manager'))->andReturn($this->dbManagerMock);
-    
+
     $this->dbManagerMock->shouldReceive('prepare')->once();
     $this->dbManagerMock->shouldReceive('execute')->once();
     $this->dbManagerMock->shouldReceive('fetchArray')
@@ -154,7 +154,7 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
                     array('agent_pk'=>$this->otherAgentId,'agent_name'=>$this->otherAgentName),
                     false);
     $this->dbManagerMock->shouldReceive('freeResult')->once();
-    
+
     $latestAgentResults = $this->agentsDao->getLatestAgentResultForUpload($this->uploadId, array($this->agentName, $this->otherAgentName));
     assertThat($latestAgentResults, is(array(
       $this->agentName => $this->agentId,
@@ -190,6 +190,4 @@ class AgentDaoTest extends \PHPUnit_Framework_TestCase {
   {
     $this->assertFalse($this->agentsDao->arsTableExists("unknown"));
   }
-
 }
- 

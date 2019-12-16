@@ -17,7 +17,7 @@
 ***********************************************************/
 
 /**
- * \file common-cache.php
+ * \file
  * \brief General purpose classes used for fossology report cache.
  *
  * \package common-cache
@@ -29,21 +29,22 @@
 /**
  * \brief This function is used by Output()
  * to see if the requested report is in the report cache.
+ *
  * If it is, the report is returned as a string.
  * Else, there is an empty return.
- * By convention, this should be called with _SERVER[REQUEST_URI].
+ * By convention, this should be called with `_SERVER[REQUEST_URI]`.
  * However, any data may be put into the cache by any key.
  * This function also purges the cache of unused items.
  *
- * \param $CacheKey - cashekey, can get cashevalue throuth cashedkey 
+ * \param string $CacheKey Cachekey, can get cache value through cachedkey
  *
- * \return return null when cashe is off for this user, else return value for this key 
+ * \return Return null when cache is off for this user, else return value for this key
  *
- * \remark UserCacheStat: Does user want cache on?
- *                0 Don't know
- *                1 Cache is on
- *                2 Cache is off for this user
- *                $UserCacheStat = 0;  // default, don't know
+ * \remark UserCacheStat: Does user want cache on? \n
+ *                0 Don't know \n
+ *                1 Cache is on \n
+ *                2 Cache is off for this user \n
+ *                $UserCacheStat = 0;  `// default, don't know`
  */
 
 function ReportCacheGet($CacheKey)
@@ -52,8 +53,7 @@ function ReportCacheGet($CacheKey)
   global $UserCacheStat;
 
   /* Purge old entries ~ 1/500 of the times this fcn is called */
-  if ( rand(1,500) == 1)
-  {
+  if (rand(1, 500) == 1) {
     ReportCachePurgeByDate(" now() - interval '365 days'");
   }
 
@@ -61,17 +61,15 @@ function ReportCacheGet($CacheKey)
    * If a record does not exist for this user, then the cache is on default
    * is used.
    */
-  if ($UserCacheStat == 0)
-  {
+  if ($UserCacheStat == 0) {
     $sql = "SELECT cache_on FROM report_cache_user WHERE user_fk='$_SESSION[UserId]';";
     $result = pg_query($PG_CONN, $sql);
     DBCheckResult($result, $sql, __FILE__, __LINE__);
     $row = pg_fetch_assoc($result);
     pg_free_result($result);
-    if (!empty($row['cache_on']) && ($result['cache_on'] == 'N'))
-    {
+    if (! empty($row['cache_on']) && ($result['cache_on'] == 'N')) {
       $UserCacheStat = 2;
-      return;  /* cache is off for this user */
+      return; /* cache is off for this user */
     }
   }
 
@@ -97,9 +95,9 @@ function ReportCacheGet($CacheKey)
 /**
  * \brief This function is used to write a record
  * to the report cache.  If the record already exists, update it.
- * 
- * \param $CacheKey - cashekey
- * \param $CacheValue - cashevalue
+ *
+ * \param string $CacheKey Cachekey
+ * \param string $CacheValue Cachevalue
  */
 function ReportCachePut($CacheKey, $CacheValue)
 {
@@ -111,8 +109,7 @@ function ReportCachePut($CacheKey, $CacheValue)
   * If it isn't, it is safe to fallback to the default
   * behavior (cache is on).
   */
-  if ($UserCacheStat == 2)
-  {
+  if ($UserCacheStat == 2) {
     return;
   }
 
@@ -125,11 +122,10 @@ function ReportCachePut($CacheKey, $CacheValue)
   $ParsedURI = array();
   parse_str($EscKey, $ParsedURI);
   /* use 'upload= ' to define the upload in the cache key */
-  if (array_key_exists("upload", $ParsedURI))
-  $Upload = $ParsedURI['upload'];
-  else
-  if (array_key_exists("item", $ParsedURI))
-  {
+  if (array_key_exists("upload", $ParsedURI)) {
+    $Upload = $ParsedURI['upload'];
+  }
+  if (array_key_exists("item", $ParsedURI)) {
     $sql = "SELECT upload_fk FROM uploadtree WHERE uploadtree_pk='$ParsedURI[item]';";
     $result = pg_query($PG_CONN, $sql);
     DBCheckResult($result, $sql, __FILE__, __LINE__);
@@ -138,7 +134,9 @@ function ReportCachePut($CacheKey, $CacheValue)
     $Upload = $row['upload_fk'];
     pg_free_result($result);
   }
-  if (empty($Upload)) $Upload = "Null";
+  if (empty($Upload)) {
+    $Upload = "Null";
+  }
 
   $sql = "INSERT INTO report_cache (report_cache_key, report_cache_value, report_cache_uploadfk)
                            VALUES ('$EscKey', '$EscValue', $Upload);";
@@ -147,9 +145,9 @@ function ReportCachePut($CacheKey, $CacheValue)
   pg_free_result($result);
   $PGError = pg_last_error($PG_CONN);
   /* If duplicate key, do an update, else report the error */
-  if (strpos($PGError, "uplicate") > 0)
-  {
-    $sql = "UPDATE report_cache SET report_cache_value = '$EscValue', report_cache_tla=now() WHERE report_cache_key = '$EscKey';";
+  if (strpos($PGError, "uplicate") > 0) {
+    $sql = "UPDATE report_cache SET report_cache_value = '$EscValue', " .
+      "report_cache_tla=now() WHERE report_cache_key = '$EscKey';";
     $result = pg_query($PG_CONN, $sql);
     DBCheckResult($result, $sql, __FILE__, __LINE__);
     pg_free_result($result);
@@ -171,8 +169,8 @@ function ReportCachePurgeAll()
 /**
  * \brief Purge from the report cache records
  * that have been accessed previous to $PurgeDate.
- * 
- * \param $PurgeDate - format: YYYY-MM-DD HH:MM:SS (or some portion thereof).
+ *
+ * \param string $PurgeDate Format: `YYYY-MM-DD HH:MM:SS` (or some portion thereof).
  */
 function ReportCachePurgeByDate($PurgeDate)
 {
@@ -186,8 +184,8 @@ function ReportCachePurgeByDate($PurgeDate)
 /**
  * \brief Purge from the report cache
  * records for upload $UploadPK.
- * 
- * \param $UploadPK - upload id
+ *
+ * \param int $UploadPK Upload id
  */
 function ReportCachePurgeByUpload($UploadPK)
 {
@@ -202,9 +200,9 @@ function ReportCachePurgeByUpload($UploadPK)
  * \brief Purge from the report cache the
  * record with $CacheKey
  *
- * \param $CacheKey  can get cashevalue throuth cashedkey
- * 
- * \return error msg
+ * \param string $CacheKey Can get cachevalue through cachedkey
+ *
+ * \return Error message
  */
 function ReportCachePurgeByKey($CacheKey)
 {
@@ -221,5 +219,3 @@ function ReportCachePurgeByKey($CacheKey)
 
   return $Err;
 } // ReportCachePurgeByKey()
-
-?>

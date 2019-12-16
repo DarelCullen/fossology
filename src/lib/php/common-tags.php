@@ -20,23 +20,25 @@ use Fossology\Lib\Auth\Auth;
 use Fossology\Lib\Dao\UploadDao;
 
 /**
- * \file common-tags.php
- * \brief common function of tag
+ * \file
+ * \brief Common functions for tag
  */
 
 
 /**
- * \brief Get all Tags of this unploadtree_pk.
+ * \brief Get all Tags of this uploadtree_pk.
  *
- * \param $Item the uploadtree_pk
- * \param $Recurse boolean, to recurse or not
- * \param $uploadtree_tablename
+ * \param int $Item The uploadtree_pk
+ * \param bool $Recurse To recurse or not
+ * \param string $uploadtree_tablename
  *
- * \return an array of: tag_pk and tag_name; return empty array: disable tagging on this upload
+ * \return An array of: tag_pk and tag_name; return empty array: disable tagging on this upload
  */
 function GetAllTags($Item, $Recurse=true, $uploadtree_tablename="uploadtree")
 {
-  if (empty($Item)) { return array(); }
+  if (empty($Item)) {
+    return array();
+  }
 
   global $container;
 
@@ -45,8 +47,7 @@ function GetAllTags($Item, $Recurse=true, $uploadtree_tablename="uploadtree")
   $stmt = __METHOD__.".$uploadtree_tablename";
   $sql = "select true from tag_manage, $uploadtree_tablename u where is_disabled = true and tag_manage.upload_fk = u.upload_fk and u.uploadtree_pk = $1";
   $tagDisabled = $dbManager->getSingleRow($sql, array($Item), $stmt);
-  if ($tagDisabled !== false)
-  {
+  if ($tagDisabled !== false) {
     return array();
   }
 
@@ -55,15 +56,12 @@ function GetAllTags($Item, $Recurse=true, $uploadtree_tablename="uploadtree")
   $uploadtree_row = $dbManager->getSingleRow($sql,array($Item), $stmt2);
 
   $params = array($Item, $uploadtree_row['upload_fk']);
-  if ($Recurse)
-  {
+  if ($Recurse) {
     $Condition = " lft between $3 and $4 ";
     $stmt .= ".recurse";
     $params[] = $uploadtree_row['lft'];
     $params[] = $uploadtree_row['rgt'];
-  }
-  else
-  {
+  } else {
     $Condition = " uploadtree.uploadtree_pk=$1 ";
   }
 
@@ -81,33 +79,38 @@ function GetAllTags($Item, $Recurse=true, $uploadtree_tablename="uploadtree")
 
 
 /**
- * \brief Build a single choice select pulldown for tagging
+ * \brief Build a single choice select pull-down for tagging
  *
- * \param $KeyValArray   Assoc array.  Use key/val pairs for list
- * \param $SLName        Select list name (default is "unnamed")
- * \param $SelectedVal   Initially selected value or key, depends on $SelElt
- * \param $FirstEmpty    True if the list starts off with an empty choice (default is false)
- * \param $SelElt        True (default) if $SelectedVal is a value False if $SelectedVal is a key
- * \param $Options       Optional select element options
+ * \param array  $KeyValArray Assoc array. Use key/val pairs for list
+ * \param string $SLName      Select list name (default is "unnamed")
+ * \param string $SelectedVal Initially selected value or key, depends on
+ * $SelElt
+ * \param bool   $FirstEmpty  True if the list starts off with an empty choice
+ * (default is false)
+ * \param bool   $SelElt      True (default) if $SelectedVal is a value False
+ * if $SelectedVal is a key
+ * \param string $Options     Optional select element options
  *
- *\return string of html select
+ *\return String of HTML select
  */
 function Array2SingleSelectTag($KeyValArray, $SLName="unnamed", $SelectedVal= "",
 $FirstEmpty=false, $SelElt=true, $Options="")
 {
   $str ="\n<select name='$SLName' $Options>\n";
-  if ($FirstEmpty) $str .= "<option value='' > \n";
-  foreach ($KeyValArray as $key => $val)
-  {
-    if ($SelElt == true)
+  if ($FirstEmpty) {
+    $str .= "<option value='' > \n";
+  }
+  foreach ($KeyValArray as $key => $val) {
+    if ($SelElt == true) {
       $SELECTED = ($val == $SelectedVal) ? "SELECTED" : "";
-    else
+    } else {
       $SELECTED = ($key == $SelectedVal) ? "SELECTED" : "";
-/** @todo GetTaggingPerms is commented out due to bug in it **/
-//    $perm = GetTaggingPerms($_SESSION['UserId'],$key);
-//    if ($perm > 1) {
+    }
+    /** @todo GetTaggingPerms is commented out due to bug in it **/
+    //    $perm = GetTaggingPerms($_SESSION['UserId'],$key);
+    //    if ($perm > 1) {
       $str .= "<option value='$key' $SELECTED>$val\n";
-//    }
+    //    }
   }
   $str .= "</select>";
   return $str;
@@ -117,34 +120,36 @@ $FirstEmpty=false, $SelElt=true, $Options="")
  * \brief Build a single choice select pulldown for the user to select
  *        both a tag.
  *
- * \param $SL_Name       Select list name (default is "unnamed")
- * \param $SL_ID         Select list ID (default is $SL_Name)
- * \param $SelectedVal   Initially selected value or key, depends on $SelElt
- * \param $FirstEmpty    True if the list starts off with an empty choice (default is false)
+ * \param string $SL_Name       Select list name (default is "unnamed")
+ * \param string $SL_ID         Select list ID (default is $SL_Name)
+ * \param bool   $SelectedVal   Initially selected value or key, depends on $SelElt
+ * \param bool   $FirstEmpty    True if the list starts off with an empty choice (default is false)
  *
- *\return string of html select
+ *\return String of html select
  */
-function TagSelect($SLName="unnamed", $SelectedVal= "", 
+function TagSelect($SLName="unnamed", $SelectedVal= "",
                    $FirstEmpty=false, $SelElt=true)
 {
   /* Find all the tag namespaces for this user */
-/*  UNUSED
+  /*  UNUSED
   $sql = "select lft,rgt from uploadtree where uploadtree_pk=$Item";
   $result = pg_query($PG_CONN, $sql);
   DBCheckResult($result, $sql, __FILE__, __LINE__);
   $uploadtree_row = pg_fetch_assoc($result);
-*/
+  */
 
   /* Find all the tags for this namespace */
 
   $str ="\n<select name='$SLName'>\n";
-  if ($FirstEmpty) $str .= "<option value='' > \n";
-  foreach ($KeyValArray as $key => $val)
-  {
-    if ($SelElt == true)
+  if ($FirstEmpty) {
+    $str .= "<option value='' > \n";
+  }
+  foreach ($KeyValArray as $key => $val) {
+    if ($SelElt == true) {
       $SELECTED = ($val == $SelectedVal) ? "SELECTED" : "";
-    else
+    } else {
       $SELECTED = ($key == $SelectedVal) ? "SELECTED" : "";
+    }
     $perm = GetTaggingPerms($_SESSION['UserId'],$key);
     if ($perm > 1) {
       $str .= "<option value='$key' $SELECTED>$val\n";
@@ -157,48 +162,47 @@ function TagSelect($SLName="unnamed", $SelectedVal= "",
 /**
  * \brief Given a list of uploadtree recs, remove recs that do not have $tag_pk.
  *
- * \param $UploadtreeRows This array may be modified by this function.
- * \param $tag_pk
- * \param $uploadtree_tablename
- *
- *\return none
+ * \param[in,out] array &$UploadtreeRows This array may be modified by this function.
+ * \param int    $tag_pk
+ * \param string $uploadtree_tablename
  */
 function TagFilter(&$UploadtreeRows, $tag_pk, $uploadtree_tablename)
 {
-  foreach ($UploadtreeRows as $key=>$UploadtreeRow)
-  {
+  foreach ($UploadtreeRows as $key=>$UploadtreeRow) {
     $found = false;
     $tags = GetAllTags($UploadtreeRow["uploadtree_pk"], true, $uploadtree_tablename);
-    foreach($tags as $tagArray)
-    {
-      if ($tagArray['tag_pk'] == $tag_pk) 
-      {
+    foreach ($tags as $tagArray) {
+      if ($tagArray['tag_pk'] == $tag_pk) {
         $found = true;
         break;
       }
-      if ($found) break;
+      if ($found) {
+        break;
+      }
     }
-    if ($found == false) unset($UploadtreeRows[$key]);
+    if ($found == false) {
+      unset($UploadtreeRows[$key]);
+    }
   }
 }
 
 /**
- * \brief check if tagging on one upload is disabled or not
- * 
- * \param $upload_id - upload id
- * 
+ * \brief Check if tagging on one upload is disabled or not
+ *
+ * \param int $upload_id Upload id
+ *
  * \return 1: enabled; 0: disabled, or no write permission
  */
-function TagStatus($upload_id) 
+function TagStatus($upload_id)
 {
   global $PG_CONN, $container;
-  /* @var $uploadDao UploadDao */
+  /** @var UploadDao $uploadDao */
   $uploadDao = $container->get('dao.upload');
   if (!$uploadDao->isEditable($upload_id, Auth::getGroupId())) {
     return 0;
   }
 
-  /** check if this upload has been disabled */
+  /* check if this upload has been disabled */
   $sql = "select tag_manage_pk from tag_manage where upload_fk = $upload_id and is_disabled = true;";
   $result = pg_query($PG_CONN, $sql);
   DBCheckResult($result, $sql, __FILE__, __LINE__);

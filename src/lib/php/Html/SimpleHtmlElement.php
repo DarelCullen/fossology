@@ -18,16 +18,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Html;
 
-
-use Fossology\Lib\Util\Object;
-
-class SimpleHtmlElement extends Object implements HtmlElement
+class SimpleHtmlElement implements HtmlElement
 {
 
   private $name;
   private $attributes;
 
-  function __construct($name, $attributes=array()) {
+  function __construct($name, $attributes = array())
+  {
     $this->name = $name;
     $this->attributes = $attributes;
   }
@@ -44,7 +42,7 @@ class SimpleHtmlElement extends Object implements HtmlElement
   function getOpeningText()
   {
     $openingText = "<" . $this->name;
-    foreach($this->attributes as $name => $value) {
+    foreach ($this->attributes as $name => $value) {
       $openingText .= " $name=\"$value\"";
     }
     return $openingText . ">";

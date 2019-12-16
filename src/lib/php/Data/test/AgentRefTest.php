@@ -18,7 +18,7 @@
 
 namespace Fossology\Lib\Data;
 
-class AgentRefTest extends \PHPUnit_Framework_TestCase
+class AgentRefTest extends \PHPUnit\Framework\TestCase
 {
   private $agentId = 1243;
   private $agentName = "<agentName>";
@@ -50,5 +50,4 @@ class AgentRefTest extends \PHPUnit_Framework_TestCase
   {
     assertThat(strval($this->agentRef), is("AgentRef(1243, <agentName>, <agentRevision)"));
   }
-
 }

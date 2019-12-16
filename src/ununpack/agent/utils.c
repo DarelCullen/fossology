@@ -1,6 +1,6 @@
 /*******************************************************************
  Copyright (C) 2011-2013 Hewlett-Packard Development Company, L.P.
- 
+
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
  version 2 as published by the Free Software Foundation.
@@ -14,31 +14,47 @@
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *******************************************************************/
+/**
+ * \file
+ * \brief Contains all utility functions used by FOSSology
+ */
 #include "ununpack.h"
 #include "externs.h"
+#include "regex.h"
+#include "sha2.h"
 
+/**
+ * \brief File mode BITS
+ */
 enum BITS {
-  BITS_PROJECT = 27, 
+  BITS_PROJECT = 27,
   BITS_ARTIFACT = 28,
   BITS_CONTAINER = 29
 };
 
+/**
+ * regular expression to detect SCM data
+ */
+const char* SCM_REGEX = "/\\.git|\\.hg|\\.bzr|CVS/ROOT|\\.svn/";
+
+
 
 /**
- * @brief Test if the file is a compression bomb.  
- *        If the size of FileName is a factor of InflateSize more than the
- *        size of the directory containing it, then it is a bomb.
+ * @brief Test if the file is a compression bomb.
+ *
+ * If the size of FileName is a factor of InflateSize more than the
+ * size of the directory containing it, then it is a bomb.
  * @param FileName pathname to file
  * @param InflateSize Inflation factor.
- * @return: 1 on is one inflated file, 0 on is not
+ * @return 1 on is one inflated file, 0 on is not
  */
 int IsInflatedFile(char *FileName, int InflateSize)
 {
   int result = 0;
   char FileNameParent[PATH_MAX];
-  memset(FileNameParent, 0, PATH_MAX);
   struct stat st, stParent;
-  strncpy(FileNameParent, FileName, sizeof(FileNameParent));
+  memcpy(FileNameParent, FileName, sizeof(FileNameParent));
+  FileNameParent[PATH_MAX-1] = 0;
   char  *lastSlashPos = strrchr(FileNameParent, '/');
   if (NULL != lastSlashPos)
   {
@@ -67,19 +83,20 @@ int IsInflatedFile(char *FileName, int InflateSize)
 /**
  * @brief Close scheduler and database connections, then exit.
  * @param rc exit code
- * @returns no return, calls exit(rc)
+ * @returns no return, calls exit()
  */
 void	SafeExit	(int rc)
 {
-  if (pgConn) PQfinish(pgConn); 
+  if (pgConn) PQfinish(pgConn);
   fo_scheduler_disconnect(rc);
   exit(rc);
 } /* SafeExit() */
 
 /**
  * @brief get rid of the postfix
- *   for example: test.gz --> test
- * @param Name input file name
+ *
+ * For example: `test.gz --> test`
+ * @param[in,out] Name input file name
  */
 void RemovePostfix(char *Name)
 {
@@ -94,9 +111,10 @@ void RemovePostfix(char *Name)
 
 /**
  * @brief Initialize the metahandler CMD table.
+ *
  * This ensures that:
- *  - every mimetype is loaded
- *  - every mimetype has an DBindex.
+ *  - Every mimetype is loaded
+ *  - Every mimetype has an DBindex.
  */
 void	InitCmd	()
 {
@@ -121,7 +139,7 @@ void	InitCmd	()
     result =  PQexec(pgConn, SQL); /* SELECT */
     if (fo_checkPQresult(pgConn, result, SQL, __FILE__, __LINE__)) SafeExit(1);
     else if (PQntuples(result) > 0) /* if there is a value */
-    {  
+    {
       CMD[i].DBindex = atol(PQgetvalue(result,0,0));
       PQclear(result);
     }
@@ -132,7 +150,7 @@ void	InitCmd	()
       snprintf(SQL,MAXSQL,"INSERT INTO mimetype (mimetype_name) VALUES ('%s');",CMD[i].Magic);
       result =  PQexec(pgConn, SQL); /* INSERT INTO mimetype */
       if (fo_checkPQcommand(pgConn, result, SQL, __FILE__ ,__LINE__)) SafeExit(2);
-      else 
+      else
       {
         PQclear(result);
         goto ReGetCmd;
@@ -144,9 +162,15 @@ void	InitCmd	()
 
 /**
  * @brief Protect strings intelligently.
+ *
  * Prevents filenames containing ' or % or \ from screwing
- * up system() and snprintf().  Even supports a "%s".
- * NOTE: %s is assumed to be in single quotes!
+ * up system() and snprintf(). Even supports a "%s".
+ * @note %s is assumed to be in single quotes!
+ * @param[in,out] Dest Destination to store tainted string
+ * @param DestLen Length of Dest
+ * @param Src     Source string
+ * @param ProtectQuotes Set to protect quotes for shell
+ * @param Replace String to replace with
  * @returns 0 on success, 1 on overflow.
  **/
 int	TaintString	(char *Dest, int DestLen,
@@ -194,7 +218,8 @@ int	TaintString	(char *Dest, int DestLen,
 } /* TaintString() */
 
 /**
- * @brief Given a filename and its stat, prune it:
+ * @brief Given a filename and its stat, prune it
+ *
  * - Remove anything that is not a regular file or directory
  * - Remove files when hard-link count > 1 (duplicate search)
  * - Remove zero-length files
@@ -250,7 +275,7 @@ int MkDirs (char *Fname)
       {
         if (!S_ISDIR(Status.st_mode))
         {
-          LOG_FATAL("'%s' is not a directory.",Dir)
+          LOG_FATAL("'%s' is not a directory.",Dir);
           SafeExit(3);
         }
       }
@@ -260,7 +285,7 @@ int MkDirs (char *Fname)
         if (rc && (errno == EEXIST)) rc=0;
         if (rc)
         {
-          LOG_FATAL("mkdir %s' failed, error: %s",Dir,strerror(errno))
+          LOG_FATAL("mkdir %s' failed, error: %s",Dir,strerror(errno));
           SafeExit(4);
         }
         chmod(Dir,02770);
@@ -272,7 +297,7 @@ int MkDirs (char *Fname)
   if (rc && (errno == EEXIST)) rc=0;
   if (rc)
   {
-    LOG_FATAL("mkdir %s' failed, error: %s",Dir,strerror(errno))
+    LOG_FATAL("mkdir %s' failed, error: %s",Dir,strerror(errno));
     SafeExit(5);
   }
   chmod(Dir,02770);
@@ -281,6 +306,7 @@ int MkDirs (char *Fname)
 
 /**
  * @brief Smart mkdir.
+ *
  * If mkdir fails, then try running MkDirs.
  * @param Fname file name
  * @returns 0 on success, 1 on failure.
@@ -312,7 +338,8 @@ int	IsDir	(char *Fname)
 } /* IsDir() */
 
 /**
- * @brief: Given a filename, is it a file?
+ * @brief Given a filename, is it a file?
+ * @param Fname Path of file to check
  * @param Link True if should it follow symbolic links
  * @returns 1=yes, 0=no.
  **/
@@ -330,9 +357,10 @@ int      IsFile  (char *Fname, int Link)
 
 /**
  * @brief Read a command from a stream.
+ *
  * If the line is empty, then try again.
  * @param Fin  Input file pointer
- * @param Line Output line buffer
+ * @param[out] Line Output line buffer
  * @param MaxLine Max line length
  * @returns line length, or -1 of EOF.
  **/
@@ -366,11 +394,12 @@ int     ReadLine (FILE *Fin, char *Line, int MaxLine)
 
 /**
  * @brief Check if the executable exists.
+ *
  * (Like the command-line "which" but without returning the path.)
- * This should only be used on relative path executables.
+ * \note This should only be used on relative path executables.
  * @param Exe Executable file name
  * @param Quiet If true, do not write warning on file not found
- * @returns: 1 if exists, 0 if does not exist.
+ * @returns 1 if exists, 0 if does not exist.
  **/
 int	IsExe	(char *Exe, int Quiet)
 {
@@ -408,7 +437,7 @@ int	IsExe	(char *Exe, int Quiet)
     strcat(TestCmd,Exe);
     if (IsFile(TestCmd,1))	return(1); /* found it! */
   }
-  if (!Quiet) LOG_WARNING("%s not found in $PATH",Exe)
+  if (!Quiet) LOG_WARNING("%s not found in $PATH",Exe);
   return(0); /* not in path */
 } /* IsExe() */
 
@@ -416,8 +445,8 @@ int	IsExe	(char *Exe, int Quiet)
  * @brief Copy a file.
  * For speed: mmap and save.
  * @param Src Source file path
- * @param Dst Destination file path
- * @returns: 0 if copy worked, 1 if failed.
+ * @param[out] Dst Destination file path
+ * @returns 0 if copy worked, 1 if failed.
  **/
 int	CopyFile	(char *Src, char *Dst)
 {
@@ -435,7 +464,7 @@ int	CopyFile	(char *Src, char *Dst)
   Fin = open(Src,O_RDONLY);
   if (Fin == -1)
   {
-    LOG_FATAL("Unable to open source '%s'",Src)
+    LOG_FATAL("Unable to open source '%s'",Src);
     SafeExit(22);
   }
 
@@ -451,7 +480,7 @@ int	CopyFile	(char *Src, char *Dst)
   Fout = open(Dst,O_WRONLY|O_CREAT|O_TRUNC,Stat.st_mode);
   if (Fout == -1)
   {
-    LOG_FATAL("Unable to open target '%s'",Dst)
+    LOG_FATAL("Unable to open target '%s'",Dst);
     close(Fin);
     SafeExit(23);
   }
@@ -460,8 +489,8 @@ int	CopyFile	(char *Src, char *Dst)
   Mmap = mmap(0,LenIn,PROT_READ,MAP_PRIVATE,Fin,0);
   if (Mmap == NULL)
   {
-    LOG_FATAL("pfile %s Unable to process file.",Pfile_Pk)
-    LOG_WARNING("pfile %s Mmap failed during copy.",Pfile_Pk)
+    LOG_FATAL("pfile %s Unable to process file.",Pfile_Pk);
+    LOG_WARNING("pfile %s Mmap failed during copy.",Pfile_Pk);
     rc=1;
     goto CopyFileEnd;
   }
@@ -485,7 +514,7 @@ int	CopyFile	(char *Src, char *Dst)
 
 
 /**
- * @brief Wait for a child.  Sets child status.
+ * @brief Wait for a child. Sets child status.
  * @returns the queue record, or -1 if no more children.
  **/
 int     ParentWait      ()
@@ -510,7 +539,7 @@ int     ParentWait      ()
   {
     if (!ForceContinue)
     {
-      LOG_FATAL("Child had unnatural death")
+      LOG_FATAL("Child had unnatural death");
       SafeExit(6);
     }
     Queue[i].ChildCorrupt=1;
@@ -521,8 +550,8 @@ int     ParentWait      ()
   {
     if (!ForceContinue)
     {
-      LOG_FATAL("Child had non-zero status: %d",Status)
-      LOG_FATAL("Child was to recurse on %s",Queue[i].ChildRecurse)
+      LOG_FATAL("Child had non-zero status: %d",Status);
+      LOG_FATAL("Child was to recurse on %s",Queue[i].ChildRecurse);
       SafeExit(10);
     }
     Queue[i].ChildCorrupt=1;
@@ -587,8 +616,9 @@ void	CheckCommands	(int Show)
 
 /**
  * @brief Try a command and return command code.
+ *
  * Command becomes:
- * - Cmd CmdPre 'File' CmdPost Out
+ * - `Cmd CmdPre 'File' CmdPost Out`
  * - If there is a %s, then that becomes Where.
  * @param Cmd
  * @param CmdPre
@@ -601,7 +631,7 @@ void	CheckCommands	(int Show)
 int	RunCommand	(char *Cmd, char *CmdPre, char *File, char *CmdPost,
     char *Out, char *Where)
 {
-  char Cmd1[FILENAME_MAX * 3];
+  char Cmd1[FILENAME_MAX * 5];
   char CWD[FILENAME_MAX];
   int rc;
   char TempPre[FILENAME_MAX];
@@ -614,20 +644,28 @@ int	RunCommand	(char *Cmd, char *CmdPre, char *File, char *CmdPost,
   if (Verbose)
   {
     if (Where && Out)
-      LOG_DEBUG("Extracting %s: %s > %s",Cmd,File,Out)
-    else 
-    if (Where) 
-      LOG_DEBUG("Extracting %s in %s: %s\n",Cmd,Where,File)
-    else 
-      LOG_DEBUG("Testing %s: %s\n",Cmd,File)
+    {
+      LOG_DEBUG("Extracting %s: %s > %s",Cmd,File,Out);
+    }
+    else
+    {
+      if (Where)
+      {
+        LOG_DEBUG("Extracting %s in %s: %s\n",Cmd,Where,File);
+      }
+      else
+      {
+        LOG_DEBUG("Testing %s: %s\n",Cmd,File);
+      }
+    }
   }
 
   if (getcwd(CWD,sizeof(CWD)) == NULL)
   {
-    LOG_FATAL("directory name longer than %d characters",(int)sizeof(CWD))
+    LOG_FATAL("directory name longer than %d characters",(int)sizeof(CWD));
     SafeExit(24);
   }
-  if (Verbose > 1) LOG_DEBUG("CWD: %s\n",CWD);
+  if (Verbose > 1){ LOG_DEBUG("CWD: %s\n",CWD);}
   if ((Where != NULL) && (Where[0] != '\0'))
   {
     if (chdir(Where) != 0)
@@ -635,11 +673,11 @@ int	RunCommand	(char *Cmd, char *CmdPre, char *File, char *CmdPost,
       MkDir(Where);
       if (chdir(Where) != 0)
       {
-        LOG_FATAL("Unable to access directory '%s'",Where)
+        LOG_FATAL("Unable to access directory '%s'",Where);
         SafeExit(25);
       }
     }
-    if (Verbose > 1) LOG_DEBUG("CWD: %s",Where)
+    if (Verbose > 1) LOG_DEBUG("CWD: %s",Where);
   }
 
   /* CMD: Cmd CmdPre 'CWD/File' CmdPost */
@@ -665,16 +703,16 @@ int	RunCommand	(char *Cmd, char *CmdPre, char *File, char *CmdPost,
   rc = system(Cmd1);
   if (WIFSIGNALED(rc))
   {
-    LOG_ERROR("Process killed by signal (%d): %s",WTERMSIG(rc),Cmd1)
+    LOG_ERROR("Process killed by signal (%d): %s",WTERMSIG(rc),Cmd1);
     SafeExit(8);
   }
   if (WIFEXITED(rc)) rc = WEXITSTATUS(rc);
   else rc=-1;
-  if (Verbose) LOG_DEBUG("in %s -- %s ; rc=%d",Where,Cmd1,rc)
+  if (Verbose) LOG_DEBUG("in %s -- %s ; rc=%d",Where,Cmd1,rc);
 
   if(chdir(CWD) != 0)
-    LOG_ERROR("Unable to change directory to %s", CWD)
-  if (Verbose > 1) LOG_DEBUG("CWD: %s",CWD)
+    LOG_ERROR("Unable to change directory to %s", CWD);
+  if (Verbose > 1) LOG_DEBUG("CWD: %s",CWD);
   return(rc);
 } /* RunCommand() */
 
@@ -689,7 +727,7 @@ int InitMagic()
   MagicCookie = magic_open(MAGIC_MIME);
   if (MagicCookie == NULL)
   {
-    LOG_FATAL("Failed to initialize magic cookie")
+    LOG_FATAL("Failed to initialize magic cookie");
     SafeExit(9);
   }
   return magic_load(MagicCookie,NULL);
@@ -697,6 +735,7 @@ int InitMagic()
 
 /**
  * @brief Read file to see if it is a Debian source file
+ *
  * Assumes that all Debian source files have a .dsc filename extension.
  * @param Filename File to open
  * @returns 1 if Filename is a Debian source file, else 0
@@ -715,22 +754,22 @@ int IsDebianSourceFile(char *Filename)
   {
     if (strcmp(pExt, ".dsc")==0)
     {
-      /* read the first 500 characters of the file to verify that 
+      /* read the first 500 characters of the file to verify that
       * it really is a debian source file
       */
       if ((fp = fopen(Filename, "r")) == NULL) return 0;
-      j=0;	
+      j=0;
       while ((c = fgetc(fp)) != EOF && j < 500 ){
         line[j]=c;
         j++;
       }
       fclose(fp);
-      if ((strstr(line, "-----BEGIN PGP SIGNED MESSAGE-----") && strstr(line,"Source:")) || 
+      if ((strstr(line, "-----BEGIN PGP SIGNED MESSAGE-----") && strstr(line,"Source:")) ||
           (strstr(line, "Format:") && strstr(line, "Source:") && strstr(line, "Version:")))
       {
         return 1;
       }
-    }	
+    }
   }
   return 0;
 }
@@ -773,7 +812,7 @@ void OctetType(char *Filename, char *TypeBuf)
     if(rc3==0)
     {
       LOG_ERROR("'%s' cannot be unpacked, password required.",Filename);
-      return;  
+      return;
     }
   }
   if ((rc1 || rc2)==0)
@@ -849,13 +888,13 @@ int	FindCmd	(char *Filename)
   strncpy(TypeBuf, Type, sizeof(TypeBuf));
   TypeBuf[255] = 0;  /* make sure TypeBuf is null terminated */
 
-  if (strstr(Type, "octet" )) 
+  if (strstr(Type, "octet" ))
   {
     OctetType(Filename, TypeBuf);
   }
   else
   if (IsDebianSourceFile(Filename)) strcpy(TypeBuf,"application/x-debian-source");
-  else 
+  else
   if (strstr(Type, "msword") || strstr(Type, "vnd.ms"))
      strcpy(TypeBuf, "application/x-7z-w-compressed");
   else
@@ -875,8 +914,8 @@ int	FindCmd	(char *Filename)
       return(-1); /* bad tar! (Yes, they do happen) */
   } /* if was x-tar */
 
-  /* Match Type (mimetype from magic or from special processing above to determine 
-   * the command for Filename 
+  /* Match Type (mimetype from magic or from special processing above to determine
+   * the command for Filename
    */
   Match=-1;
   for(i=0; (CMD[i].Cmd != NULL) && (Match == -1); i++)
@@ -887,7 +926,7 @@ int	FindCmd	(char *Filename)
       Match=i; /* done! */
     }
     else
-      if (!strstr(TypeBuf, CMD[i].Magic)) 
+      if (!strstr(TypeBuf, CMD[i].Magic))
       {
         continue; /* not a match */
       }
@@ -897,10 +936,15 @@ int	FindCmd	(char *Filename)
   if (Verbose > 0)
   {
     /* no match */
-    if (Match == -1) LOG_DEBUG("MISS: Type=%s  %s",TypeBuf,Filename)
-    else LOG_DEBUG("MATCH: Type=%d  %s %s %s %s",CMD[Match].Type,CMD[Match].Cmd,CMD[Match].CmdPre,Filename,CMD[Match].CmdPost)
+    if (Match == -1)
+    {
+      LOG_DEBUG("MISS: Type=%s  %s",TypeBuf,Filename);
+    }
+    else
+    {
+      LOG_DEBUG("MATCH: Type=%d  %s %s %s %s",CMD[Match].Type,CMD[Match].Cmd,CMD[Match].CmdPre,Filename,CMD[Match].CmdPost);
+    }
   }
-
   return(Match);
 } /* FindCmd() */
 
@@ -930,7 +974,7 @@ void	FreeDirList	(dirlist *DL)
 
 /**
  * @brief Create a list of files in a directory.
- * @param Fullname path to top level directory.
+ * @param Fullname Path to top level directory.
  * @returns the directory list
  **/
 dirlist *	MakeDirList	(char *Fullname)
@@ -952,13 +996,13 @@ dirlist *	MakeDirList	(char *Fullname)
     dhead = (dirlist *)malloc(sizeof(dirlist));
     if (!dhead)
     {
-      LOG_FATAL("Failed to allocate dirlist memory")
+      LOG_FATAL("Failed to allocate dirlist memory");
       SafeExit(10);
     }
     dhead->Name = (char *)malloc(strlen(Entry->d_name)+1);
     if (!dhead->Name)
     {
-      LOG_FATAL("Failed to allocate dirlist.Name memory")
+      LOG_FATAL("Failed to allocate dirlist.Name memory");
       SafeExit(11);
     }
     memset(dhead->Name,'\0',strlen(Entry->d_name)+1);
@@ -1002,12 +1046,13 @@ dirlist *	MakeDirList	(char *Fullname)
 
 /**
  * @brief  Set a destination directory name.
- *         This will concatenate Smain and Sfile, but remove
- *         and terminating filename.
- * @param Dest returned directory name
+ *
+ * This will concatenate Smain and Sfile, but remove
+ * and terminating filename.
+ * @param[in,out] Dest returned directory name
  * @param DestLen size of Dest
- * @param Smain = main extraction directory (may be null)
- * @param Sfile = filename
+ * @param Smain main extraction directory (may be null)
+ * @param Sfile filename
  **/
 void	SetDir	(char *Dest, int DestLen, char *Smain, char *Sfile)
 {
@@ -1044,16 +1089,16 @@ void	SetDir	(char *Dest, int DestLen, char *Smain, char *Sfile)
 
 
 /**
- * @brief print a ContainerInfo structure.
+ * @brief Print a ContainerInfo structure.
  * @param CI ContainerInfo struct to print
  **/
 void	DebugContainerInfo	(ContainerInfo *CI)
 {
-  LOG_DEBUG("Container:")
-  printf("  Source: %s\n",CI->Source); 
-  printf("  Partdir: %s\n",CI->Partdir); 
-  printf("  Partname: %s\n",CI->Partname); 
-  printf("  PartnameNew: %s\n",CI->PartnameNew); 
+  LOG_DEBUG("Container:");
+  printf("  Source: %s\n",CI->Source);
+  printf("  Partdir: %s\n",CI->Partdir);
+  printf("  Partname: %s\n",CI->Partname);
+  printf("  PartnameNew: %s\n",CI->PartnameNew);
   printf("  TopContainer: %d\n",CI->TopContainer);
   printf("  HasChild: %d\n",CI->HasChild);
   printf("  Pruned: %d\n",CI->Pruned);
@@ -1080,14 +1125,17 @@ int	DBInsertPfile	(ContainerInfo *CI, char *Fuid)
 {
   PGresult *result;
   char *Val; /* string result from SQL query */
+  long tempMimeType; ///< Temporary storage for mimetype fk from DB
+  char *tempSha256; ///< Temporary storage for pfile_sha256 from DB
 
   /* idiot checking */
   if (!Fuid || (Fuid[0] == '\0')) return(1);
 
   /* Check if the pfile exists */
   memset(SQL,'\0',MAXSQL);
-  snprintf(SQL,MAXSQL,"SELECT pfile_pk,pfile_mimetypefk FROM pfile WHERE pfile_sha1 = '%.40s' AND pfile_md5 = '%.32s' AND pfile_size = '%s';",
-      Fuid,Fuid+41,Fuid+74);
+  snprintf(SQL,MAXSQL,"SELECT pfile_pk,pfile_mimetypefk,pfile_sha256 FROM pfile "
+      "WHERE pfile_sha1 = '%.40s' AND pfile_md5 = '%.32s' AND pfile_size = '%s';",
+      Fuid,Fuid+41,Fuid+140);
   result =  PQexec(pgConn, SQL); /* SELECT */
   if (fo_checkPQresult(pgConn, result, SQL, __FILE__, __LINE__)) SafeExit(12);
 
@@ -1095,19 +1143,20 @@ int	DBInsertPfile	(ContainerInfo *CI, char *Fuid)
   if (PQntuples(result) == 0)
   {
     /* blindly insert to pfile table in database (don't care about dups) */
-    /** If TWO ununpacks are running at the same time, they could both
-        create the same pfile at the same time.  Ignore the dup constraint. */
+    /* If TWO ununpacks are running at the same time, they could both
+        create the same pfile at the same time. Ignore the dup constraint. */
     PQclear(result);
     memset(SQL,'\0',MAXSQL);
     if (CMD[CI->PI.Cmd].DBindex > 0)
     {
-      snprintf(SQL,MAXSQL,"INSERT INTO pfile (pfile_sha1,pfile_md5,pfile_size,pfile_mimetypefk) VALUES ('%.40s','%.32s','%s','%ld');",
-          Fuid,Fuid+41,Fuid+74,CMD[CI->PI.Cmd].DBindex);
+      snprintf(SQL,MAXSQL,"INSERT INTO pfile (pfile_sha1,pfile_md5,pfile_sha256,pfile_size,pfile_mimetypefk) "
+               "VALUES ('%.40s','%.32s','%.64s','%s','%ld');",
+          Fuid,Fuid+41,Fuid+74,Fuid+140,CMD[CI->PI.Cmd].DBindex);
     }
     else
     {
-      snprintf(SQL,MAXSQL,"INSERT INTO pfile (pfile_sha1,pfile_md5,pfile_size) VALUES ('%.40s','%.32s','%s');",
-          Fuid,Fuid+41,Fuid+74);
+      snprintf(SQL,MAXSQL,"INSERT INTO pfile (pfile_sha1,pfile_md5,pfile_sha256,pfile_size) VALUES ('%.40s','%.32s','%.64s','%s');",
+          Fuid,Fuid+41,Fuid+74,Fuid+140);
     }
     result =  PQexec(pgConn, SQL); /* INSERT INTO pfile */
     // ignore duplicate constraint failure (23505), report others
@@ -1122,8 +1171,9 @@ int	DBInsertPfile	(ContainerInfo *CI, char *Fuid)
     /* Now find the pfile_pk.  Since it might be a dup, we cannot rely
        on currval(). */
     memset(SQL,'\0',MAXSQL);
-    snprintf(SQL,MAXSQL,"SELECT pfile_pk,pfile_mimetypefk FROM pfile WHERE pfile_sha1 = '%.40s' AND pfile_md5 = '%.32s' AND pfile_size = '%s';",
-        Fuid,Fuid+41,Fuid+74);
+    snprintf(SQL,MAXSQL,"SELECT pfile_pk,pfile_mimetypefk,pfile_sha256 FROM pfile "
+        "WHERE pfile_sha1 = '%.40s' AND pfile_md5 = '%.32s' AND pfile_sha256 = '%.64s' AND pfile_size = '%s';",
+        Fuid,Fuid+41,Fuid+74,Fuid+140);
     result =  PQexec(pgConn, SQL);  /* SELECT */
     if (fo_checkPQresult(pgConn, result, SQL, __FILE__, __LINE__)) SafeExit(14);
   }
@@ -1133,15 +1183,27 @@ int	DBInsertPfile	(ContainerInfo *CI, char *Fuid)
   if (Val)
   {
     CI->pfile_pk = atol(Val);
-    if (Verbose) LOG_DEBUG("pfile_pk = %ld",CI->pfile_pk)
+    if (Verbose) LOG_DEBUG("pfile_pk = %ld",CI->pfile_pk);
+    tempMimeType = atol(PQgetvalue(result,0,1));
+    tempSha256 = PQgetvalue(result,0,2);
     /* For backwards compatibility... Do we need to update the mimetype? */
     if ((CMD[CI->PI.Cmd].DBindex > 0) &&
-        (atol(PQgetvalue(result,0,1)) != CMD[CI->PI.Cmd].DBindex))
+        ((tempMimeType != CMD[CI->PI.Cmd].DBindex)))
     {
       PQclear(result);
       memset(SQL,'\0',MAXSQL);
       snprintf(SQL,MAXSQL,"UPDATE pfile SET pfile_mimetypefk = '%ld' WHERE pfile_pk = '%ld';",
           CMD[CI->PI.Cmd].DBindex, CI->pfile_pk);
+      result =  PQexec(pgConn, SQL); /* UPDATE pfile */
+      if (fo_checkPQcommand(pgConn, result, SQL, __FILE__ ,__LINE__)) SafeExit(16);
+    }
+    /* Update the SHA256 for the pfile if it does not exists */
+    if (strncasecmp(tempSha256, Fuid+74, 64) != 0)
+    {
+      PQclear(result);
+      memset(SQL,'\0',MAXSQL);
+      snprintf(SQL,MAXSQL,"UPDATE pfile SET pfile_sha256 = '%.64s' WHERE pfile_pk = '%ld';",
+          Fuid+74, CI->pfile_pk);
       result =  PQexec(pgConn, SQL); /* UPDATE pfile */
       if (fo_checkPQcommand(pgConn, result, SQL, __FILE__ ,__LINE__)) SafeExit(16);
     }
@@ -1158,13 +1220,78 @@ int	DBInsertPfile	(ContainerInfo *CI, char *Fuid)
 } /* DBInsertPfile() */
 
 /**
+ * @brief Search for SCM data in the filename
+ *
+ * SCM data is one of these:
+ *   Git (.git)Data(char *FileName)
+ *   Mercurial (.hg)
+ *   Bazaar (.bzr)
+ *   CVS (CVS/Root)
+ *   Subversion (.svn)
+ * @param sourcefilename
+ * @returns 1 if SCM data is found
+ **/
+int TestSCMData(char *sourcefilename)
+{
+  regex_t preg;
+  int err;
+  int found=0;
+
+  err = regcomp (&preg, SCM_REGEX, REG_NOSUB | REG_EXTENDED);
+  if (err == 0)
+  {
+    int match;
+
+    match = regexec (&preg, sourcefilename, 0, NULL, 0);
+    regfree (&preg);
+    if(match == 0)
+    {
+      found = 1;
+      if (Verbose) LOG_DEBUG("match found %s",sourcefilename);
+    }
+    else if(match == REG_NOMATCH)
+    {
+      found = 0;
+      if (Verbose) LOG_DEBUG("match not found %s",sourcefilename);
+    }
+    else
+    {
+      char *text;
+      size_t size;
+      size = regerror (err, &preg, NULL, 0);
+      text = malloc (sizeof (*text) * size);
+      if(text)
+      {
+        regerror (err, &preg, text, size);
+        LOG_ERROR("Error regexc '%s' '%s' return %d, error %s",SCM_REGEX,sourcefilename,match,text);
+      }
+      else
+      {
+        LOG_ERROR("Not enough memory (%lu)",sizeof (*text) * size);
+        SafeExit(127);
+      }
+      found = 0;
+    }
+  }
+  else
+  {
+     LOG_ERROR("Error regcomp(%d)",err);
+     SafeExit(127);
+  }
+
+
+  return(found);
+} /* TestSCMData() */
+
+/**
  * @brief Insert an UploadTree record.
- *        If the tree is a duplicate, then we need to replicate
- *        all of the uploadtree records for the tree.
- *        This uses Upload_Pk.
+ *
+ * If the tree is a duplicate, then we need to replicate
+ * all of the uploadtree records for the tree.
+ * This uses Upload_Pk.
  * @param CI
  * @param Mask mask file mode for ufile_mode
- * @returns: 1 if tree exists for some other project (duplicate) and 0 if tree does not exist.
+ * @returns 1 if tree exists for some other project (duplicate) and 0 if tree does not exist.
  **/
 int	DBInsertUploadTree	(ContainerInfo *CI, int Mask)
 {
@@ -1209,17 +1336,26 @@ int	DBInsertUploadTree	(ContainerInfo *CI, int Mask)
       strcpy(UfileName,"artifact.meta");
     else /* Don't know what it is */
       strcpy(UfileName,"artifact");
-    strncpy(CI->Partname,UfileName,sizeof(CI->Partname)-1);  
+    strncpy(CI->Partname,UfileName,sizeof(CI->Partname)-1);
   }
 
   PQescapeStringConn(pgConn, EscBuf, CI->Partname, strlen(CI->Partname), &error);
   if (error)
-      LOG_WARNING("Error escaping filename with multibyte character set (%s).", CI->Partname)
+  {
+      LOG_WARNING("Error escaping filename with multibyte character set (%s).", CI->Partname);
+  }
   else
+  {
     strncpy(UfileName, EscBuf, sizeof(UfileName));
+  }
 
-  // Begin add by vincent
-  if(ReunpackSwitch)
+  /*
+   * Tests for SCM Data: IgnoreSCMData is global and defined in ununpack_globals.h with false value
+   * and pass to true if ununpack is called with -I option to ignore SCM data.
+   * So if IgnoreSCMData is false the right test is true.
+   * Otherwise if IgnoreSCMData is true and CI->Source is not a SCM data then add it in database.
+  */
+  if(ReunpackSwitch && ((IgnoreSCMData && !TestSCMData(CI->Source)) || !IgnoreSCMData))
   {
     /* postgres 8.3 seems to have a problem escaping binary characters
      * (it works in 8.4).  So manually substitute '~' for any unprintable and slash chars.
@@ -1257,8 +1393,7 @@ int	DBInsertUploadTree	(ContainerInfo *CI, int Mask)
     if (fo_checkPQresult(pgConn, result, SQL, __FILE__, __LINE__)) SafeExit(20);
     CI->uploadtree_pk = atol(PQgetvalue(result,0,0));
     PQclear(result);
-  } 
-  //End add by Vincent
+  }
   TotalItems++;
   fo_scheduler_heart(1);
   return(0);
@@ -1267,11 +1402,12 @@ int	DBInsertUploadTree	(ContainerInfo *CI, int Mask)
 /**
  * @brief Add a ContainerInfo record to the
  *        repository AND to the database.
- *        This modifies the CI record's pfile and ufile indexes!
+ *
+ * This modifies the CI record's pfile and ufile indexes!
  * @param CI
- * @param Fuid sha1.md5.size
+ * @param Fuid sha1.md5.sha256.size
  * @param Mask file mode mask
- * @returns: 1 if added, 0 if already exists!
+ * @returns 1 if added, 0 if already exists!
  **/
 int	AddToRepository	(ContainerInfo *CI, char *Fuid, int Mask)
 {
@@ -1282,17 +1418,25 @@ int	AddToRepository	(ContainerInfo *CI, char *Fuid, int Mask)
   /* If we ever want to skip artifacts, use && !CI->Artifact */
   if ((Fuid[0]!='\0') && UseRepository)
   {
+    /* Translate the new Fuid into old Fuid */
+    char FuidNew[1024];
+    memset(FuidNew, '\0', sizeof(FuidNew));
+    // Copy the value till md5
+    strncpy(FuidNew, Fuid, 74);
+    // Copy the size of the file
+    strcat(FuidNew,Fuid+140);
+
     /* put file in repository */
     if (!fo_RepExist(REP_FILES,Fuid))
     {
-      if (fo_RepImport(CI->Source,REP_FILES,Fuid,1) != 0)
+      if (fo_RepImport(CI->Source,REP_FILES,FuidNew,1) != 0)
       {
-        LOG_ERROR("Failed to import '%s' as '%s' into the repository",CI->Source,Fuid)
+        LOG_ERROR("Failed to import '%s' as '%s' into the repository",CI->Source,FuidNew);
         SafeExit(21);
       }
     }
     if (Verbose) LOG_DEBUG("Repository[%s]: insert '%s' as '%s'",
-        REP_FILES,CI->Source,Fuid)
+        REP_FILES,CI->Source,FuidNew);
   }
 
   /* PERFORMANCE NOTE:
@@ -1313,12 +1457,39 @@ int	AddToRepository	(ContainerInfo *CI, char *Fuid, int Mask)
   return(IsUnique);
 } /* AddToRepository() */
 
+int calc_sha256sum(char*filename, char* dst) {
+    sha256_ctx ctx;
+    unsigned char buf[32];
+    unsigned char digest[32];
+    memset(digest, '\0', sizeof(digest));
+    FILE *f;
+    if(!(f=fopen(filename, "rb")))
+    {
+        LOG_FATAL("Failed to open file '%s'\n", filename);
+        return(1);
+    }
+    sha256_init(&ctx);
+
+    int i=0;
+    while((i=fread(buf, 1, sizeof(buf), f)) > 0) {
+        sha256_update(&ctx, buf, i);
+    }
+    sha256_final(&ctx, digest);
+    fclose(f);
+
+    for (i=0; i<32; i++) {
+        snprintf(dst+i*2, 3, "%02X", digest[i]);
+    }
+
+    return 0;
+}
+
 /**
  * @brief Print what can be printed in XML.
  * @param CI
- * @param Cmd = command used to create this file (parent)
- *              CI->Cmd = command to be used ON this file (child)
- * @returns: 1 if item is unique, 0 if duplicate.
+ * @param Cmd Command used to create this file (parent)
+ *            CI->Cmd = command to be used ON this file (child)
+ * @returns 1 if item is unique, 0 if duplicate.
  **/
 int	DisplayContainerInfo	(ContainerInfo *CI, int Cmd)
 {
@@ -1421,7 +1592,7 @@ int	DisplayContainerInfo	(ContainerInfo *CI, int Cmd)
           fprintf(ListOutFile,"mtime=\"%d\" ",(int)(CI->Stat.st_mtime));
       }
 #if 0
-      /** commented out since almost anything can screw this up. **/
+      /* commented out since almost anything can screw this up. */
       if (CI->Stat.st_ctime)
       {
         if ((CI->Stat.st_ctime < CI->PI.StartTime) || (CI->Stat.st_ctime > CI->PI.EndTime))
@@ -1436,19 +1607,31 @@ int	DisplayContainerInfo	(ContainerInfo *CI, int Cmd)
   {
     CksumFile *CF;
     Cksum *Sum;
+    char SHA256[65];
+
+    memset(SHA256, '\0', sizeof(SHA256));
 
     CF = SumOpenFile(CI->Source);
+    if(calc_sha256sum(CI->Source, SHA256))
+    {
+        LOG_FATAL("Unable to calculate SHA256 of %s\n", CI->Source);
+        SafeExit(56);
+    }
+
     if (CF)
     {
       Sum = SumComputeBuff(CF);
       SumCloseFile(CF);
+
       if (Sum)
       {
         for(i=0; i<20; i++) { sprintf(Fuid+0+i*2,"%02X",Sum->SHA1digest[i]); }
         Fuid[40]='.';
         for(i=0; i<16; i++) { sprintf(Fuid+41+i*2,"%02X",Sum->MD5digest[i]); }
         Fuid[73]='.';
-        snprintf(Fuid+74,sizeof(Fuid)-74,"%Lu",(long long unsigned int)Sum->DataLen);
+        for(i=0; i<64; i++) { sprintf(Fuid+74+i,"%c",SHA256[i]); }
+        Fuid[139]='.';
+        snprintf(Fuid+140,sizeof(Fuid)-140,"%Lu",(long long unsigned int)Sum->DataLen);
         if (ListOutFile) fprintf(ListOutFile,"fuid=\"%s\" ",Fuid);
         free(Sum);
       } /* if Sum */
@@ -1466,7 +1649,9 @@ int	DisplayContainerInfo	(ContainerInfo *CI, int Cmd)
           Fuid[40]='.';
           for(i=0; i<16; i++) { sprintf(Fuid+41+i*2,"%02X",Sum->MD5digest[i]); }
           Fuid[73]='.';
-          snprintf(Fuid+74,sizeof(Fuid)-74,"%Lu",(long long unsigned int)Sum->DataLen);
+          for(i=0; i<64; i++) { sprintf(Fuid+74+i,"%c",SHA256[i]); }
+          Fuid[139]='.';
+          snprintf(Fuid+140,sizeof(Fuid)-140,"%Lu",(long long unsigned int)Sum->DataLen);
           if (ListOutFile) fprintf(ListOutFile,"fuid=\"%s\" ",Fuid);
           free(Sum);
         }
@@ -1505,6 +1690,7 @@ int RemoveDir(char *dirpath)
 
 /**
  * @brief Check if path contains a "%U" or "%H". If so, substitute a unique ID for %U.
+ *
  * This substitution parameter must be at the end of the DirPath.
  * Substitute hostname for %H.
  * @parm DirPath Directory path.
@@ -1593,6 +1779,7 @@ void	Usage	(char *Name, char *Version)
   fprintf(stderr,"  -L out :: Generate a log of files extracted (in XML) to out.\n");
   fprintf(stderr,"  -F     :: Using files from the repository.\n");
   fprintf(stderr,"  -i     :: Initialize the database queue system, then exit.\n");
+  fprintf(stderr,"  -I     :: Ignore SCM Data.\n");
   fprintf(stderr,"  -Q     :: Using scheduler queue system. (Includes -F)\n");
   fprintf(stderr,"            If -L is used, unpacked files are placed in 'files'.\n");
   fprintf(stderr,"      -T rep :: Set gold repository name to 'rep' (for testing)\n");
@@ -1612,7 +1799,6 @@ void	Usage	(char *Name, char *Version)
   fprintf(stderr,"  Boot partitions: x86, vmlinuz\n");
   CheckCommands(Quiet);
 } /* Usage() */
-
 
 /**
  * @brief Dummy postgresql notice processor.

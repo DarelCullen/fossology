@@ -1,6 +1,7 @@
 <?php
 /***********************************************************
  Copyright (C) 2010-2012 Hewlett-Packard Development Company, L.P.
+ Copyright (C) 2013-2016, 2018 Siemens AG
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
@@ -16,8 +17,9 @@
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ***********************************************************/
 
-use Fossology\Lib\Db\DbManager;
 use Fossology\Lib\Auth\Auth;
+use Fossology\Lib\Dao\UploadDao;
+use Fossology\Lib\Db\DbManager;
 
 /**
  * \file list.php
@@ -26,19 +28,24 @@ use Fossology\Lib\Auth\Auth;
  * uploadtree.
  */
 
-define("TITLE_copyright_list", _("List Files for Copyright/Email/URL"));
+define("TITLE_COPYRIGHT_LIST", _("List Files for Copyright/Email/URL"));
 
 class copyright_list extends FO_Plugin
 {
-  /**
-   * @var DbManager
+  /** @var DbManager
+   * DbManager object
    */
   private $dbManager;
+
+  /** @var UploadDao
+   * UploadDao opbject
+   */
+  private $uploadDao;
 
   function __construct()
   {
     $this->Name = "copyright-list";
-    $this->Title = TITLE_copyright_list;
+    $this->Title = TITLE_COPYRIGHT_LIST;
     $this->Version = "1.0";
     $this->Dependency = array("copyright-hist", "ecc-hist");
     $this->DBaccess = PLUGIN_DB_READ;
@@ -48,10 +55,12 @@ class copyright_list extends FO_Plugin
     parent::__construct();
     global $container;
     $this->dbManager = $container->get('db.manager');
+    $this->uploadDao = $container->get('dao.upload');
   }
 
   /**
-   * \brief Customize submenus.
+   * @copydoc FO_Plugin::RegisterMenus()
+   * @see FO_Plugin::RegisterMenus()
    */
   function RegisterMenus()
   {
@@ -64,55 +73,61 @@ class copyright_list extends FO_Plugin
     $uploadtree_pk = GetParm("item",PARM_INTEGER);
     $hash = GetParm("hash",PARM_RAW);
     $type = GetParm("type",PARM_RAW);
-    $Page = GetParm("page",PARM_INTEGER);
     $Excl = GetParm("excl",PARM_RAW);
-    $filter = GetParm("filter",PARM_RAW);
 
     $URL = $this->Name . "&agent=$agent_pk&item=$uploadtree_pk&hash=$hash&type=$type&page=-1";
-    if (!empty($Excl)) $URL .= "&excl=$Excl";
+    if (!empty($Excl)) {
+      $URL .= "&excl=$Excl";
+    }
     $text = _("Show All Files");
     menu_insert($this->Name."::Show All",0, $URL, $text);
-
   } // RegisterMenus()
 
-
   /**
-   * \return return rows to process, and $upload_pk
-   * @param $Uploadtree_pk
-   * @param $Agent_pk
-   * @param $upload_pk
-   * @param $hash
-   * @param $type
-   * @param $tableName
+   * @brief Get statement rows for a specified set
+   * @param int $Uploadtree_pk Uploadtree id
+   * @param int $Agent_pk Agent id
+   * @param int $upload_pk Upload id
+   * @param string $hash Content hash
+   * @param string $type Content type
+   * @param string $tableName Content table name (copyright|ecc|author)
    * @throws Exception
-   * @return array
+   * @return array Rows to process, and $upload_pk
    */
   function GetRows($Uploadtree_pk, $Agent_pk, &$upload_pk, $hash, $type, $tableName)
   {
-    global $PG_CONN;
-
     /*******  Get license names and counts  ******/
-    /* Find lft and rgt bounds for this $Uploadtree_pk  */
-    $sql = "SELECT lft,rgt,upload_fk FROM uploadtree
-              WHERE uploadtree_pk = $Uploadtree_pk";
-    $result = pg_query($PG_CONN, $sql);
-    DBCheckResult($result, $sql, __FILE__, __LINE__);
-    $row = pg_fetch_assoc($result);
+    $row = $this->uploadDao->getUploadEntry($Uploadtree_pk);
     $lft = $row["lft"];
     $rgt = $row["rgt"];
     $upload_pk = $row["upload_fk"];
-    pg_free_result($result);
+    $params = [];
 
-    /* get all the copyright records for this uploadtree.  */
-    $sql = "SELECT content, type, uploadtree_pk, ufile_name, PF
-              from $tableName,
-              (SELECT uploadtree_pk, pfile_fk as PF, ufile_name from uploadtree 
-                 where upload_fk=$1
-                   and uploadtree.lft BETWEEN $2 and $3) as SS
-              where PF=pfile_fk and agent_fk=$4 and hash=$5 and type=$6 order by uploadtree_pk";
+    if ($type == "copyFindings") {
+      $sql = "SELECT textfinding AS content, '$type' AS type, uploadtree_pk, ufile_name, PF
+              FROM $tableName,
+              (SELECT uploadtree_pk, pfile_fk AS PF, ufile_name FROM uploadtree
+                 WHERE upload_fk=$1
+                   AND uploadtree.lft BETWEEN $2 AND $3) AS SS
+              WHERE PF=pfile_fk AND hash=$4 ORDER BY uploadtree_pk";
+      $params = [
+        $upload_pk, $lft, $rgt, $hash
+      ];
+    } else {
+      /* get all the copyright records for this uploadtree.  */
+      $sql = "SELECT content, type, uploadtree_pk, ufile_name, PF
+                FROM $tableName,
+                (SELECT uploadtree_pk, pfile_fk AS PF, ufile_name FROM uploadtree
+                   WHERE upload_fk=$1
+                     AND uploadtree.lft BETWEEN $2 AND $3) AS SS
+                WHERE PF=pfile_fk AND agent_fk=$4 AND hash=$5 AND type=$6 ORDER BY uploadtree_pk";
+      $params = [
+        $upload_pk, $lft, $rgt, $Agent_pk, $hash, $type
+      ];
+    }
     $statement = __METHOD__.$tableName;
     $this->dbManager->prepare($statement, $sql);
-    $result = $this->dbManager->execute($statement,array($upload_pk, $lft, $rgt, $Agent_pk, $hash, $type));
+    $result = $this->dbManager->execute($statement,$params);
 
     $rows = $this->dbManager->fetchAll($result);
     $this->dbManager->freeResult($result);
@@ -120,17 +135,17 @@ class copyright_list extends FO_Plugin
     return $rows;
   }
 
-
   /**
    * \brief Remove unwanted rows by hash and type and
    * exclusions and filter
-   * \param $NumRows - the number of instances.
-   * \return new array and $NumRows
+   * \param array $rows
+   * \param string $excl
+   * \param int $NumRows the number of instances.
+   * \param string $filter
+   * \return array new array and $NumRows
    */
   function GetRequestedRows($rows, $excl, &$NumRows, $filter)
   {
-    global $PG_CONN;
-
     $NumRows = count($rows);
     $prev = 0;
     $ExclArray = explode(":", $excl);
@@ -141,19 +156,21 @@ class copyright_list extends FO_Plugin
       $NoLicStr = "No_license_found";
       $VoidLicStr = "Void";
       $rf_clause = "";
-      $sql = "select rf_pk from license_ref where rf_shortname IN  ('$NoLicStr', '$VoidLicStr')";
-      $result = pg_query($PG_CONN, $sql);
-      DBCheckResult($result, $sql, __FILE__, __LINE__);
-      if (pg_num_rows($result) > 0)
-      {
-        $rf_rows = pg_fetch_all($result);
-        foreach($rf_rows as $row) 
+
+      $sql = "select rf_pk from license_ref where rf_shortname IN ($1, $2)";
+      $statement = __METHOD__."NoLicenseFoundORVoid";
+      $this->dbManager->prepare($statement, $sql);
+      $result = $this->dbManager->execute($statement,array("$NoLicStr", "$VoidLicStr"));
+      $rf_rows = $this->dbManager->fetchAll($result);
+      if(!empty($rf_rows)){
+        foreach($rf_rows as $row)
         {
-          if (!empty($rf_clause)) $rf_clause .= " or ";
+          if (!empty($rf_clause)) { $rf_clause .= " or ";
+          }
           $rf_clause .= " rf_fk=$row[rf_pk]";
         }
       }
-      pg_free_result($result);
+      $this->dbManager->freeResult($result);
     }
 
     for($RowIdx = 0; $RowIdx < $NumRows; $RowIdx++)
@@ -174,19 +191,17 @@ class copyright_list extends FO_Plugin
       if (($filter == "nolic") and ($rf_clause))
       {
         /* discard file unless it has no license */
-        $sql = "select rf_fk from license_file where ($rf_clause) and pfile_fk={$row['pf']}";
-        $result = pg_query($PG_CONN, $sql);
-        DBCheckResult($result, $sql, __FILE__, __LINE__);
-        $FoundRows = pg_num_rows($result);
-        pg_free_result($result);
-        if ($FoundRows == 0)
+        $sql = "select rf_fk from license_file where ($rf_clause) and pfile_fk=$1";
+        $statement = __METHOD__."CheckForNoLicenseFound";
+        $this->dbManager->prepare($statement, $sql);
+        $result = $this->dbManager->execute($statement,array("{$row['pf']}"));
+        $FoundRows = $this->dbManager->fetchAll($result);
+        if (empty($FoundRows))
         {
           unset($rows[$RowIdx]);
           continue;
         }
       }
-
-
     }
 
     /* reset array keys, keep order (uploadtree_pk) */
@@ -207,8 +222,9 @@ class copyright_list extends FO_Plugin
          * remove duplicate uploadtree_pk's.  This can happen if there
          * are multiple same copyrights in one file.
          */
-        if ($rows2[$RowIdx-1]['uploadtree_pk'] == $rows2[$RowIdx]['uploadtree_pk'])
-        unset($rows2[$RowIdx-1]);
+        if ($rows2[$RowIdx-1]['uploadtree_pk'] == $rows2[$RowIdx]['uploadtree_pk']) {
+          unset($rows2[$RowIdx-1]);
+        }
       }
     }
 
@@ -218,6 +234,10 @@ class copyright_list extends FO_Plugin
     return $rows2;
   }
 
+  /**
+   * @copydoc FO_Plugin::OutputOpen()
+   * @see FO_Plugin::OutputOpen()
+   */
   function OutputOpen()
   {
 
@@ -229,23 +249,17 @@ class copyright_list extends FO_Plugin
   }
 
   /**
-   * \brief Display the loaded menu and plugins.
+   * @copydoc FO_Plugin::Output()
+   * @see FO_Plugin::Output()
    */
   function Output()
   {
     if ($this->State != PLUGIN_STATE_READY) {
       return;
     }
-    global $PG_CONN;
-
-    // make sure there is a db connection
-    if (!$PG_CONN) {
-      echo _("NO DB connection");
-    }
 
     $OutBuf = "";
     $Time = microtime(true);
-
     $Max = 50;
 
     /*  Input parameters */
@@ -257,22 +271,20 @@ class copyright_list extends FO_Plugin
     $filter = GetParm("filter",PARM_RAW);
     if (empty($uploadtree_pk) || empty($hash) || empty($type) || empty($agent_pk))
     {
-      $this->vars['pageContent'] = $this->Name . _("is missing required parameters");
+      $this->vars['pageContent'] = $this->Name . _(" is missing required parameters");
       return;
     }
 
     /* Check item1 and item2 upload permissions */
-    $Row = GetSingleRec("uploadtree", "WHERE uploadtree_pk = $uploadtree_pk");
-    $UploadPerm = GetUploadPerm($Row['upload_fk']);
-    if ($UploadPerm < Auth::PERM_READ)
+    $Row = $this->uploadDao->getUploadEntry($uploadtree_pk);
+    if (!$this->uploadDao->isAccessible($Row['upload_fk'], Auth::getGroupId()))
     {
       $this->vars['pageContent'] = "<h2>" . _("Permission Denied") . "</h2>";
       return;
     }
 
-
     $Page = GetParm("page",PARM_INTEGER);
-    if (empty($Page)) {
+    if (empty($Page) || $Page == -1) {
       $Page=0;
     }
 
@@ -280,14 +292,12 @@ class copyright_list extends FO_Plugin
 
     /* get all rows */
     $upload_pk = -1;
-    $rows = $this->GetRows($uploadtree_pk, $agent_pk, $upload_pk, $hash, $type, $tableName);
-
-    /* Get uploadtree_tablename */
-    $uploadtree_tablename = GetUploadtreeTableName($upload_pk);
+    $allRows = $this->GetRows($uploadtree_pk, $agent_pk, $upload_pk, $hash, $type, $tableName);
+    $uploadtree_tablename = $this->uploadDao->getUploadtreeTableName($upload_pk);
 
     /* slim down to all rows with this hash and type,  and filter */
     $NumInstances = 0;
-    $rows = $this->GetRequestedRows($rows, $excl, $NumInstances, $filter);
+    $rows = $this->GetRequestedRows($allRows, $excl, $NumInstances, $filter);
 
     // micro menus
     $OutBuf .= menu_to_1html(menu_find($this->Name, $MenuDepth),0);
@@ -317,18 +327,24 @@ class copyright_list extends FO_Plugin
         case "ecc":
           $TypeStr = _("export restriction");
           break;
+        case "keyword":
+          $TypeStr = _("Keyword Analysis");
+          break;
+        case "copyFindings":
+          $TypeStr = _("User Findings");
       }
       $OutBuf .= "$NumInstances $TypeStr instances found in $RowCount  $text";
 
       $OutBuf .= ": <b>$Content</b>";
 
       $text = _("Display excludes files with these extensions");
-      if (!empty($excl)) $OutBuf .= "<br>$text: $excl";
+      if (!empty($excl)) { $OutBuf .= "<br>$text: $excl";
+      }
 
       /* Get the page menu */
       if (($RowCount >= $Max) && ($Page >= 0))
       {
-        $PagingMenu = "<P />\n" . MenuPage($Page,intval((($RowCount+$Offset)/$Max))) . "<P />\n";
+        $PagingMenu = "<P />\n" . MenuPage($Page, intval($RowCount / $Max)) . "<P />\n";
         $OutBuf .= $PagingMenu;
       }
       else
@@ -348,15 +364,20 @@ class copyright_list extends FO_Plugin
       foreach($rows as $row)
       {
         ++$RowNum;
-        if ($RowNum < $Offset)
+        if ($RowNum < $Offset) {
           continue;
+        }
+        if ($RowNum > $Offset + $Max) {
+          break;
+        }
 
         // Allow user to exclude files with this extension
         $FileExt = GetFileExt($row['ufile_name']);
-        if (empty($excl))
+        if (empty($excl)) {
           $URL = $baseURL . "&excl=$FileExt";
-        else
+        } else {
           $URL = $baseURL . "&excl=$excl:$FileExt";
+        }
 
         $text = _("Exclude this file type");
         $Header = "<a href=$URL>$text.</a>";
@@ -365,15 +386,17 @@ class copyright_list extends FO_Plugin
         if ($excl)
         {
           $ExclArray = explode(":", $excl);
-          if (in_array($FileExt, $ExclArray)) $ok = false;
+          if (in_array($FileExt, $ExclArray)) {
+            $ok = false;
+          }
         }
 
         if ($ok)
         {
-          $OutBuf .= Dir2Browse($modBack, $row['uploadtree_pk'], $LinkLast, $ShowBox, $ShowMicro, $RowNum, $Header, '', $uploadtree_tablename);
+          $OutBuf .= Dir2Browse($modBack, $row['uploadtree_pk'], $LinkLast,
+            $ShowBox, $ShowMicro, $RowNum, $Header, '', $uploadtree_tablename);
         }
       }
-
     }
     else
     {
@@ -393,11 +416,20 @@ class copyright_list extends FO_Plugin
     return;
   }
 
+  /**
+   * @copydoc FO_Plugin::getTemplateName()
+   * @see FO_Plugin::getTemplateName()
+   */
   function getTemplateName()
   {
     return 'copyrightlist.html.twig';
   }
 
+  /**
+   * @brief Get the table name, mod, and view based on type
+   * @param string $type Type of content
+   * @return string[] Table name, mod, and view
+   */
   private function getTableName($type)
   {
 
@@ -407,9 +439,24 @@ class copyright_list extends FO_Plugin
         $modBack = "ecc-hist";
         $viewName = "ecc-view";
         break;
-      default:
+      case "keyword" :
+        $tableName = "keyword";
+        $modBack = "keyword-hist";
+        $viewName = "keyword-view";
+        break;
+      case "statement" :
         $tableName = "copyright";
         $modBack = "copyright-hist";
+        $viewName = "copyright-view";
+        break;
+      case "copyFindings" :
+        $tableName = "copyright_decision";
+        $modBack = "copyright-hist";
+        $viewName = "copyright-view";
+        break;
+      default:
+        $tableName = "author";
+        $modBack = "email-hist";
         $viewName = "copyright-view";
     }
     return array($tableName, $modBack,$viewName);

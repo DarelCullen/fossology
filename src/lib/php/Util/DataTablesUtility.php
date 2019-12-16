@@ -21,7 +21,7 @@ namespace Fossology\Lib\Util;
 
 use Monolog\Logger;
 
-class DataTablesUtility extends Object
+class DataTablesUtility
 {
   /**
    * @var Logger
@@ -30,7 +30,7 @@ class DataTablesUtility extends Object
 
   function __construct()
   {
-    $this->logger = new Logger(self::className());
+    $this->logger = new Logger(self::class);
   }
 
   /**
@@ -40,17 +40,16 @@ class DataTablesUtility extends Object
    */
   public function getSortingParametersFromArray($inputArray, $columNamesInDatabase, $defaultSearch = array())
   {
-    if (array_key_exists('iSortingCols', $inputArray))
-    {
-      if ($inputArray['iSortingCols'] > count($columNamesInDatabase))
-      {
-        $this->logger->addWarning("did have enough columNames for " . $inputArray['iSortingCols'] . " sort columns.");
+    if (array_key_exists('iSortingCols', $inputArray)) {
+      if ($inputArray['iSortingCols'] > count($columNamesInDatabase)) {
+        $this->logger->addWarning(
+          "did have enough columNames for " . $inputArray['iSortingCols'] .
+          " sort columns.");
         return null;
       }
-      return $this->getSortingParametersFromArrayImpl($inputArray, $columNamesInDatabase, $defaultSearch);
-    }
-    else
-    {
+      return $this->getSortingParametersFromArrayImpl($inputArray,
+        $columNamesInDatabase, $defaultSearch);
+    } else {
       $this->logger->addWarning("did not find iSortingCols in inputArray");
       return null;
     }
@@ -67,15 +66,13 @@ class DataTablesUtility extends Object
   {
     $orderArray = array();
     $sortedCols = array();
-    for ($i = 0; $i < $inputArray['iSortingCols']; $i++)
-    {
+    for ($i = 0; $i < $inputArray['iSortingCols']; $i ++) {
       $whichCol = 'iSortCol_' . $i;
       $colNumber = $inputArray[$whichCol];
       $sortedCols[] = intval($colNumber);
 
       $isSortable = $inputArray['bSortable_' . $i];
-      if ($isSortable !== "true")
-      {
+      if ($isSortable !== "true") {
         continue;
       }
       $name = $columNamesInDatabase[$colNumber];
@@ -85,8 +82,7 @@ class DataTablesUtility extends Object
       $orderArray[] = $name . " " . $order;
     }
 
-    foreach ($defaultSearch as $search)
-    {
+    foreach ($defaultSearch as $search) {
       $colNumber = $search[0];
       $order = $search[1];
       if (in_array($colNumber, $sortedCols)) {
@@ -116,5 +112,4 @@ class DataTablesUtility extends Object
     $orderString = empty($orderArray) ? "" : "ORDER BY " . implode(", ", $orderArray);
     return $orderString;
   }
-
 }

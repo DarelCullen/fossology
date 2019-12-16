@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2018, Siemens AG
 Author: Andreas Würl
 
 This program is free software; you can redistribute it and/or
@@ -22,10 +22,9 @@ namespace Fossology\Lib\Dao;
 use Fossology\Lib\Data\Highlight;
 use Fossology\Lib\Data\Tree\ItemTreeBounds;
 use Fossology\Lib\Db\DbManager;
-use Fossology\Lib\Util\Object;
 use Monolog\Logger;
 
-class CopyrightDao extends Object
+class CopyrightDao
 {
   /** @var DbManager */
   private $dbManager;
@@ -38,9 +37,9 @@ class CopyrightDao extends Object
   {
     $this->dbManager = $dbManager;
     $this->uploadDao = $uploadDao;
-    $this->logger = new Logger(self::className());
+    $this->logger = new Logger(self::class);
   }
-  
+
   /**
    * @param int $uploadTreeId
    * @param string $tableName
@@ -60,29 +59,33 @@ class CopyrightDao extends Object
     $pFileId = 0;
     $row = $this->uploadDao->getUploadEntry($uploadTreeId);
 
-    if (!empty($row['pfile_fk']))
-    {
+    if (!empty($row['pfile_fk'])) {
       $pFileId = $row['pfile_fk'];
-    } else
-    {
+    } else {
       $text = _("Could not locate the corresponding pfile.");
       print $text;
     }
 
     $statementName = __METHOD__.$tableName;
-    $sql = "SELECT * FROM $tableName WHERE copy_startbyte IS NOT NULL AND pfile_fk=$1";
     $params = array($pFileId);
-    if($agentId!=0) {
+    $addAgentValue = "";
+    if (!empty($agentId)) {
       $statementName .= '.agentId';
-      $sql .= ' AND agent_fk=$2';
+      $addAgentValue = ' AND agent_fk=$2';
       $params[] = $agentId;
+    }
+    $columnsToSelect = "type, content, copy_startbyte, copy_endbyte";
+    $getHighlightForTableName = "SELECT $columnsToSelect FROM $tableName WHERE copy_startbyte IS NOT NULL AND pfile_fk=$1 $addAgentValue";
+    if ($tableName != "copyright") {
+      $sql = $getHighlightForTableName;
+    } else {
+      $sql = "$getHighlightForTableName UNION SELECT $columnsToSelect FROM author WHERE copy_startbyte IS NOT NULL AND pfile_fk=$1 $addAgentValue";
     }
     $this->dbManager->prepare($statementName,$sql);
     $result = $this->dbManager->execute($statementName, $params);
 
     $highlights = array();
-    while ($row = $this->dbManager->fetchArray($result))
-    {
+    while ($row = $this->dbManager->fetchArray($result)) {
       $type = $row['type'];
       $content = $row['content'];
       $htmlElement =null;
@@ -94,11 +97,180 @@ class CopyrightDao extends Object
     return $highlights;
   }
 
-  public function saveDecision($tableName,$pfileId, $userId , $clearingType,
-                                         $description, $textFinding, $comment){
-    $assocParams = array('user_fk'=>$userId,'pfile_fk'=>$pfileId,'clearing_decision_type_fk'=>$clearingType,
-        'description'=>$description, 'textfinding'=>$textFinding, 'comment'=>$comment );
-    $this->dbManager->insertTableRow($tableName, $assocParams, $sqlLog=__METHOD__);
+  /**
+   * @param $tableName
+   * @param $pfileId
+   * @param $userId
+   * @param $clearingType
+   * @param $description
+   * @param $textFinding
+   * @param $comment
+   * @param int $decision_pk
+   * @return int decision_pk of decision
+   */
+  public function saveDecision($tableName, $pfileId, $userId , $clearingType,
+                               $description, $textFinding, $comment, $decision_pk=-1)
+  {
+    $primaryColumn = $tableName . '_pk';
+    $assocParams = array(
+      'user_fk' => $userId,
+      'pfile_fk' => $pfileId,
+      'clearing_decision_type_fk' => $clearingType,
+      'description' => $description,
+      'textfinding' => $textFinding,
+      'hash' => hash('sha256', $textFinding),
+      'comment'=> $comment
+    );
+
+    if ($decision_pk <= 0) {
+      $rows = $this->getDecisionsFromHash($tableName, $assocParams['hash']);
+      foreach ($rows as $row) {
+        if ($row['pfile_fk'] == $pfileId) {
+          $decision_pk = $row[$primaryColumn];
+        }
+      }
+    }
+    if ($decision_pk <= 0) {
+      return $this->dbManager->insertTableRow($tableName, $assocParams,
+        __METHOD__.'Insert.'.$tableName, $primaryColumn);
+    } else {
+      $assocParams['is_enabled'] = true;
+      $this->dbManager->updateTableRow($tableName, $assocParams, $primaryColumn,
+        $decision_pk, __METHOD__.'Update.'.$tableName);
+      return $decision_pk;
+    }
+  }
+
+  public function removeDecision($tableName,$pfileId, $decisionId)
+  {
+    $primaryColumn = $tableName . '_pk';
+    $this->dbManager->prepare(__METHOD__,
+      "UPDATE $tableName
+        SET is_enabled = 'f'
+      WHERE $primaryColumn = $1
+        AND pfile_fk = $2");
+    $this->dbManager->execute(__METHOD__, array($decisionId, $pfileId));
+  }
+
+  public function undoDecision($tableName,$pfileId, $decisionId)
+  {
+    $primaryColumn = $tableName . '_pk';
+    $this->dbManager->prepare(__METHOD__,
+      "UPDATE $tableName
+        SET is_enabled = 't'
+      WHERE $primaryColumn = $1
+        AND pfile_fk = $2");
+    $this->dbManager->execute(__METHOD__, array($decisionId, $pfileId));
+  }
+
+  /**
+   * @param $tableName
+   * @param $uploadTreeTableName
+   * @param $uploadId
+   * @param $type
+   * @param $extrawhere
+   * @return array $result
+   */
+  public function getScannerEntries($tableName, $uploadTreeTableName, $uploadId, $type, $extrawhere)
+  {
+    $statementName = __METHOD__.$tableName.$uploadTreeTableName;
+    $params = array();
+    $extendWClause = null;
+
+    if ($uploadTreeTableName === "uploadtree_a") {
+      $params[]= $uploadId;
+      $extendWClause .= " AND UT.upload_fk = $".count($params);
+      $statementName .= ".withUI";
+    }
+
+    if ($type !== null && $type != "skipcontent") {
+      $params[]= $type;
+      $extendWClause .= " AND C.type = $".count($params);
+      $statementName .= ".withType";
+    }
+
+    if ($extrawhere !== null) {
+      $extendWClause .= " AND ". $extrawhere;
+      $statementName .= "._".$extrawhere."_";
+    }
+
+    $sql = "SELECT UT.uploadtree_pk as uploadtree_pk, C.content AS content
+              FROM $tableName C
+             INNER JOIN $uploadTreeTableName UT ON C.pfile_fk = UT.pfile_fk
+             WHERE C.content IS NOT NULL
+               AND C.content!=''
+               AND C.is_enabled='true'
+               $extendWClause
+             ORDER BY UT.uploadtree_pk, C.content DESC";
+    $this->dbManager->prepare($statementName, $sql);
+    $sqlResult = $this->dbManager->execute($statementName, $params);
+    $result = $this->dbManager->fetchAll($sqlResult);
+    $this->dbManager->freeResult($sqlResult);
+
+    return $result;
+  }
+
+  /**
+   * @param $tableName
+   * @param $uploadTreeTableName
+   * @param $uploadId
+   * @param $decisionType
+   * @return array $result
+   */
+  public function getEditedEntries($tableName, $uploadTreeTableName, $uploadId, $decisionType)
+  {
+    $statementName = __METHOD__.$tableName.$uploadTreeTableName;
+    $params = array();
+    $extendWClause = null;
+
+    if ($uploadTreeTableName === "uploadtree_a") {
+      $params[]= $uploadId;
+      $extendWClause .= " AND UT.upload_fk = $".count($params);
+      $statementName .= ".withUI";
+    }
+
+    if (!empty($decisionType)) {
+      $params[]= $decisionType;
+      $extendWClause .= " AND clearing_decision_type_fk = $".count($params);
+      $statementName .= ".withDecisionType";
+    }
+    $columns = "CD.description as description, CD.textfinding as textfinding, CD.comment as comments, UT.uploadtree_pk as uploadtree_pk";
+
+    $primaryColumn = $tableName . '_pk';
+    $sql = "SELECT $columns
+              FROM $tableName CD
+             INNER JOIN $uploadTreeTableName UT ON CD.pfile_fk = UT.pfile_fk
+             WHERE CD.is_enabled = 'true'
+              $extendWClause
+             ORDER BY CD.pfile_fk, UT.uploadtree_pk, CD.textfinding, CD.$primaryColumn DESC";
+    $this->dbManager->prepare($statementName, $sql);
+    $sqlResult = $this->dbManager->execute($statementName, $params);
+    $result = $this->dbManager->fetchAll($sqlResult);
+    $this->dbManager->freeResult($sqlResult);
+
+    return $result;
+  }
+
+  /**
+   * @param $tableName
+   * @param $uploadId
+   * @param $uploadTreeTableName
+   * @param $type
+   * @param $onlyCleared
+   * @param $decisionType
+   * @param $extrawhere
+   * @return array
+   */
+  public function getAllEntriesReport($tableName, $uploadId, $uploadTreeTableName, $type=null, $onlyCleared=false, $decisionType=null, $extrawhere=null)
+  {
+    $tableNameDecision = $tableName."_decision";
+    if ($tableName == 'copyright') {
+      $scannerEntries = $this->getScannerEntries($tableName, $uploadTreeTableName, $uploadId, $type, $extrawhere);
+      $editedEntries = $this->getEditedEntries($tableNameDecision, $uploadTreeTableName, $uploadId, $decisionType);
+      return array_merge($scannerEntries, $editedEntries);
+    } else {
+      return $this->getEditedEntries($tableNameDecision, $uploadTreeTableName, $uploadId, $decisionType);
+    }
   }
 
   public function getAllEntries($tableName, $uploadId, $uploadTreeTableName, $type=null, $onlyCleared=false, $decisionType=null, $extrawhere=null)
@@ -110,44 +282,30 @@ class CopyrightDao extends Object
     $distinctContent = "";
     $tableNameDecision = $tableName."_decision";
 
-    if ($uploadTreeTableName === "uploadtree_a")
-    {
+    if ($uploadTreeTableName === "uploadtree_a") {
       $params []= $uploadId;
       $whereClause .= " AND UT.upload_fk = $".count($params);
       $statementName .= ".withUI";
     }
-    if($type == "skipcontent"){
-      $distinctContent = "";
-    }else{
-      $distinctContent = ", C.content";
-    }
-    if ($type !== null && $type != "skipcontent")
-    {
+    if ($type !== null && $type != "skipcontent") {
       $params []= $type;
       $whereClause .= " AND C.type = $".count($params);
       $statementName .= ".withType";
     }
 
     $clearingTypeClause = null;
-    if ($onlyCleared)
-    {
+    if ($onlyCleared) {
       $joinType = "INNER";
-      if ($decisionType !== null)
-      {
+      if ($decisionType !== null) {
         $params []= $decisionType;
         $clearingTypeClause = "WHERE clearing_decision_type_fk = $".count($params);
         $statementName .= ".withDecisionType";
-      }
-      else
-      {
+      } else {
         throw new \Exception("requested only cleared but no type given");
       }
-    }
-    else
-    {
+    } else {
       $joinType = "LEFT";
-      if ($decisionType !== null)
-      {
+      if ($decisionType !== null) {
         $params []= $decisionType;
         $clearingTypeClause = "WHERE clearing_decision_type_fk IS NULL OR clearing_decision_type_fk = $".count($params);
         $statementName .= ".withDecisionType";
@@ -155,31 +313,31 @@ class CopyrightDao extends Object
     }
     $statementName .= ".".$joinType."Join";
 
-    if ($extrawhere !== null)
-    {
-      $whereClause .= " AND ". $extrawhere;
+    if ($extrawhere !== null) {
+      $whereClause .= "AND ". $extrawhere;
       $statementName .= "._".$extrawhere."_";
     }
+    $decisionTableKey = $tableNameDecision . "_pk";
 
-    $latestInfo = "SELECT DISTINCT ON(CD.pfile_fk, UT.uploadtree_pk$distinctContent)
+    $latestInfo = "SELECT DISTINCT ON(CD.pfile_fk, UT.uploadtree_pk, C.content, CD.textfinding)
              CD.description as description, CD.textfinding as textfinding,
              CD.comment as comments, UT.uploadtree_pk as uploadtree_pk,
              CD.clearing_decision_type_fk AS clearing_decision_type_fk,
              C.content AS content
             FROM $tableName C
             INNER JOIN $uploadTreeTableName UT
-            ON C.pfile_fk = UT.pfile_fk
-            $joinType JOIN $tableNameDecision CD
-            ON C.pfile_fk = CD.pfile_fk
-            WHERE C.content IS NOT NULL AND C.content!='' $whereClause  
-            ORDER BY CD.pfile_fk, UT.uploadtree_pk, C.content, CD.copyright_decision_pk DESC";
+              ON C.pfile_fk = UT.pfile_fk
+            $joinType JOIN (SELECT * FROM $tableNameDecision WHERE is_enabled='true') AS CD
+              ON C.pfile_fk = CD.pfile_fk
+            WHERE C.content IS NOT NULL
+              AND C.content!=''
+              AND C.is_enabled='true'
+              $whereClause
+            ORDER BY CD.pfile_fk, UT.uploadtree_pk, C.content, CD.textfinding, CD.$decisionTableKey DESC";
 
-    if ($clearingTypeClause !== null)
-    {
+    if ($clearingTypeClause !== null) {
       $sql = "SELECT * FROM ($latestInfo) AS latestInfo $clearingTypeClause";
-    }
-    else
-    {
+    } else {
       $sql = $latestInfo;
     }
 
@@ -191,18 +349,56 @@ class CopyrightDao extends Object
     return $result;
   }
 
-  public function getDecision($tableName,$pfileId){
-
+  /**
+   * @param $tableName
+   * @param $pfileId
+   * @return array
+   */
+  public function getDecisions($tableName,$pfileId)
+  {
     $statementName = __METHOD__.$tableName;
-    $sql = "SELECT * FROM $tableName where pfile_fk = $1 order by copyright_decision_pk desc limit 1";
+    $orderTablePk = $tableName.'_pk';
+    $sql = "SELECT * FROM $tableName where pfile_fk = $1 and is_enabled order by $orderTablePk desc";
+    $params = array($pfileId);
 
-    $res = $this->dbManager->getSingleRow($sql,array($pfileId),$statementName);
+    return $this->dbManager->getRows($sql, $params, $statementName);
+  }
 
-    $description = $res['description'];
-    $textFinding = $res['textfinding'];
-    $comment = $res['comment'];
-    $decisionType = $res['clearing_decision_type_fk'];
-    return array($description,$textFinding,$comment, $decisionType);
+  /**
+   * @brief Get all the decisions based on hash
+   *
+   * Get all the decisions which matches the given hash. If the upload is null,
+   * get decision from all uploads, otherwise get decisions only for the given
+   * upload.
+   *
+   * @param string $tableName Decision table name
+   * @param string $hash      Hash of the decision
+   * @param int    $upload    Upload id
+   * @param string $uploadtreetable Name of the upload tree table
+   * @return array
+   */
+  public function getDecisionsFromHash($tableName, $hash, $upload = null, $uploadtreetable = null)
+  {
+    $statementName = __METHOD__ . ".$tableName";
+    $orderTablePk = $tableName.'_pk';
+    $join = "";
+    $joinWhere = "";
+    $params = [$hash];
+
+    if ($upload != null) {
+      if (empty($uploadtreetable)) {
+        return -1;
+      }
+      $statementName.= ".filterUpload";
+      $params[] = $upload;
+      $join = "INNER JOIN $uploadtreetable AS ut ON cp.pfile_fk = ut.pfile_fk";
+      $joinWhere = "AND ut.upload_fk = $" . count($params);
+    }
+
+    $sql = "SELECT * FROM $tableName AS cp $join " .
+      "WHERE cp.hash = $1 $joinWhere ORDER BY $orderTablePk;";
+
+    return $this->dbManager->getRows($sql, $params, $statementName);
   }
 
   /**
@@ -212,64 +408,36 @@ class CopyrightDao extends Object
    * @param int $userId
    * @param string $cpTable
    */
-  public function updateTable($item, $hash, $content, $userId, $cpTable='copyright')
+  public function updateTable($item, $hash, $content, $userId, $cpTable='copyright', $action='')
   {
     $itemTable = $item->getUploadTreeTableName();
     $stmt = __METHOD__.".$cpTable.$itemTable";
-    $params = array($hash,$item->getLeft(),$item->getRight(),$content);
-    $sql = "UPDATE $cpTable AS cpr SET content = $4, hash = md5($4)
+    $params = array($hash,$item->getLeft(),$item->getRight());
+
+    if ($action == "delete") {
+      $setSql = "is_enabled='false'";
+      $stmt .= '.delete';
+    } else if ($action == "rollback") {
+      $setSql = "is_enabled='true'";
+      $stmt .= '.rollback';
+    } else {
+      $setSql = "content = $4, hash = md5($4), is_enabled='true'";
+      $params[] = $content;
+    }
+
+    $cpTablePk = $cpTable."_pk";
+    $sql = "UPDATE $cpTable AS cpr SET $setSql
             FROM $cpTable as cp
             INNER JOIN $itemTable AS ut ON cp.pfile_fk = ut.pfile_fk
-            WHERE cpr.ct_pk = cp.ct_pk
-              AND cp.hash =$1
+            WHERE cpr.$cpTablePk = cp.$cpTablePk
+              AND cp.hash = $1
               AND ( ut.lft BETWEEN $2 AND $3 )";
-    if ('uploadtree_a' == $item->getUploadTreeTableName())
-    {
+    if ('uploadtree_a' == $item->getUploadTreeTableName()) {
       $params[] = $item->getUploadId();
       $sql .= " AND ut.upload_fk=$".count($params);
       $stmt .= '.upload';
     }
-    
-    $this->dbManager->prepare($stmt, "$sql RETURNING cp.* ");
-    $oldData = $this->dbManager->execute($stmt, $params);
 
-    if($cpTable == "copyright")
-    {
-      while ($row = $this->dbManager->fetchArray($oldData))
-      {
-        $this->dbManager->insertTableRow('copyright_audit',
-                array('ct_fk'=>$row['ct_pk'],'oldtext'=>$row['content'],'user_fk'=>$userId,'upload_fk'=>$item->getUploadId(), 'uploadtree_pk'=>$item->getItemId(), 'pfile_fk'=>$row['pfile_fk']),
-                __METHOD__ . "writeHist");
-      }
-    }
-    $this->dbManager->freeResult($oldData);
-  }
-  
-  /**
-   * @param ItemTreeBounds $item
-   * @param string $hash
-   * @param int $userId
-   * @param string $cpTable
-   */
-  public function rollbackTable($item, $hash, $userId, $cpTable='copyright')
-  {
-    $itemTable = $item->getUploadTreeTableName();
-    $stmt = __METHOD__.".$cpTable.$itemTable";
-    $params = array($hash,$item->getLeft(),$item->getRight(),$userId);
-    $sql = "UPDATE $cpTable AS cpr SET content = cpa.oldtext, hash = $1
-            FROM ".$cpTable."_audit as cpa, $itemTable AS ut
-            WHERE cpr.pfile_fk = ut.pfile_fk
-              AND cpr.ct_pk = cpa.ct_fk
-              AND md5(cpa.oldtext) = $1
-              AND ( ut.lft BETWEEN $2 AND $3 )
-              AND cpa.user_fk=$4";
-    if ('uploadtree_a' == $item->getUploadTreeTableName())
-    {
-      $params[] = $item->getUploadId();
-      $sql .= " AND ut.upload_fk=$".count($params);
-      $stmt .= '.upload';
-    }
-    
     $this->dbManager->prepare($stmt, "$sql");
     $resource = $this->dbManager->execute($stmt, $params);
     $this->dbManager->freeResult($resource);

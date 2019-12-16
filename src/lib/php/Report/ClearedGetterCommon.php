@@ -1,7 +1,7 @@
 <?php
 /*
- Copyright (C) 2014, Siemens AG
- Author: Daniele Fognini
+ Copyright (C) 2014-2017, Siemens AG
+ Author: Daniele Fognini, Shaheem Azmal M MD
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
@@ -38,7 +38,8 @@ abstract class ClearedGetterCommon
   private $uploadId;
   private $groupBy;
 
-  public function __construct($groupBy = "content") {
+  public function __construct($groupBy = "content")
+  {
     global $container;
 
     $this->uploadDao = $container->get('dao.upload');
@@ -51,10 +52,8 @@ abstract class ClearedGetterCommon
   {
     $args = getopt("u:", array("uId:","gId:"));
 
-    if (!array_key_exists('u',$args))
-    {
-      print "missing required parameter -u {uploadId}\n";
-      exit(2);
+    if (!array_key_exists('u',$args)) {
+      throw new Exception("missing required parameter -u {uploadId}\n",2);
     }
 
     $this->uploadId = intval($args['u']);
@@ -66,8 +65,7 @@ abstract class ClearedGetterCommon
   {
     $uploadId = $this->uploadId;
 
-    if ($uploadId<=0)
-    {
+    if ($uploadId <= 0) {
       print "invalid uploadId ".$uploadId;
       exit(2);
     }
@@ -78,8 +76,7 @@ abstract class ClearedGetterCommon
   {
     $userId = $this->userId;
 
-    if ($userId<=0)
-    {
+    if ($userId <= 0) {
       print "invalid user ".$userId;
       exit(2);
     }
@@ -90,8 +87,7 @@ abstract class ClearedGetterCommon
   {
     $groupId = $this->groupId;
 
-    if ($groupId<=0)
-    {
+    if ($groupId <= 0) {
       print "invalid group ".$groupId;
       exit(2);
     }
@@ -102,7 +98,7 @@ abstract class ClearedGetterCommon
   {
     $parentId = $this->treeDao->getMinimalCoveringItem($uploadId, $uploadTreeTableName);
 
-    foreach($ungrupedStatements as &$statement) {
+    foreach ($ungrupedStatements as &$statement) {
       $uploadTreeId = $statement['uploadtree_pk'];
       unset($statement['uploadtree_pk']);
 
@@ -115,60 +111,80 @@ abstract class ClearedGetterCommon
     unset($statement);
   }
 
-  protected function groupStatements($ungrupedStatements)
+  protected function groupStatements($ungrupedStatements, $extended, $agentcall, $isUnifiedReport)
   {
     $statements = array();
-    foreach($ungrupedStatements as $statement) {
+    $findings = array();
+    foreach ($ungrupedStatements as $statement) {
       $content = convertToUTF8($statement['content'], false);
+      $content = htmlspecialchars($content, ENT_DISALLOWED);
       $comments = convertToUTF8($statement['comments'], false);
       $fileName = $statement['fileName'];
 
-      if (!array_key_exists('text', $statement))
-      {
+      if (!array_key_exists('text', $statement)) {
         $description = $statement['description'];
         $textfinding = $statement['textfinding'];
 
         if ($description === null) {
           $text = "";
         } else {
-          if (!empty($textfinding)) {
+          //$agentcall only have copyright so making it empty for other agents
+          if (!empty($textfinding) && empty($agentcall)) {
             $content = $textfinding;
           }
           $text = $description;
         }
-      }
-      else
-      {
+      } else {
         $text = $statement['text'];
       }
 
       $groupBy = $statement[$this->groupBy];
 
-      if (empty($comments)) {
-        if (array_key_exists($groupBy, $statements)) {
-          $currentFiles = &$statements[$groupBy]['files'];
-          if (!in_array($fileName, $currentFiles)) {
-            $currentFiles[] = $fileName;
-          }
-        } else {
-          $statements[$groupBy] = array(
-              "content" => convertToUTF8($content, false),
-              "text" => convertToUTF8($text, false),
-              "comments" => convertToUTF8($comments, false),
-              "files" => array($fileName)
-          );
+      if (empty($comments) && array_key_exists($groupBy, $statements)) {
+        $currentFiles = &$statements[$groupBy]['files'];
+        if (!in_array($fileName, $currentFiles)) {
+          $currentFiles[] = $fileName;
         }
       } else {
-        $statements[] = array(
+        $singleStatement = array(
             "content" => convertToUTF8($content, false),
             "text" => convertToUTF8($text, false),
-            "comments" => convertToUTF8($comments, false),
             "files" => array($fileName)
-        );
+          );
+        if ($extended) {
+          $singleStatement["licenseId"] = $statement['licenseId'];
+          $singleStatement["comments"] = convertToUTF8($comments, false);
+          $singleStatement["risk"] =  $statement['risk'];
+        }
+
+        if (empty($comments)) {
+          $statements[$groupBy] = $singleStatement;
+        } else {
+          $statements[] = $singleStatement;
+        }
+      }
+      if (!empty($statement['textfinding']) && !empty($agentcall)) {
+        $findings[$fileName] = array(
+            "content" => convertToUTF8($statement['textfinding'], false),
+            "text" => convertToUTF8($text, false),
+            "files" => array($fileName)
+          );
+        if ($extended) {
+          $findings[$fileName]["comments"] = convertToUTF8($comments, false);
+        }
       }
     }
-    arsort($statements);
-    return $statements;
+    if ($agentcall == "copyright" && $isUnifiedReport == true) {
+      if (!empty($findings)) {
+        return array("userFindings" => $findings, "scannerFindings" => $statements);
+      } else {
+        return array("scannerFindings" => $statements);
+      }
+    } else {
+      $statements = array_merge($findings, $statements);
+      arsort($statements);
+      return array("statements" => array_values($statements));
+    }
   }
 
   /**
@@ -179,19 +195,33 @@ abstract class ClearedGetterCommon
    */
   abstract protected function getStatements($uploadId, $uploadTreeTableName, $groupId=null);
 
-  public function getCleared($uploadId, $groupId=null)
+  public function getCleared($uploadId, $groupId=null, $extended=true, $agentcall=null, $isUnifiedReport=false)
   {
     $uploadTreeTableName = $this->uploadDao->getUploadtreeTableName($uploadId);
     $ungrupedStatements = $this->getStatements($uploadId, $uploadTreeTableName, $groupId);
     $this->changeTreeIdsToPaths($ungrupedStatements, $uploadTreeTableName, $uploadId);
-    $statements = $this->groupStatements($ungrupedStatements);
-    return array("statements" => array_values($statements));
+    $statements = $this->groupStatements($ungrupedStatements, $extended, $agentcall, $isUnifiedReport);
+    return $statements;
   }
-  
+
+  public function getLicenseHistogramForReport($uploadId, $groupId)
+  {
+    $histogramStatements = $this->getHistogram($uploadId, $groupId);
+    return array("statements" => $histogramStatements);
+  }
+
   public function cJson($uploadId, $groupId=null)
   {
-    $json = json_encode($this->getCleared($uploadId, $groupId));
-    return str_replace('\u001b','',str_replace('\\f','',$json));
+    $escapeChars = array('\\f',"\\", "/", "\"");
+    $withThisValue = array("","\\\\", "\\/", "\\\"");
+    $clearedString = str_replace($escapeChars, $withThisValue, $this->getCleared($uploadId, $groupId, false));
+    $json = json_encode($clearedString);
+    return str_replace('\u001b','',$json);
+  }
+
+  public function cJsonHist($uploadId, $groupId=null)
+  {
+    $jsonHist = json_encode($this->getLicenseHistogramForReport($uploadId, $groupId));
+    return str_replace('\u001b','',str_replace('\\f','',$jsonHist));
   }
 }
-

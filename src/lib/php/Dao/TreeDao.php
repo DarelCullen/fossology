@@ -1,7 +1,8 @@
 <?php
 /*
 Copyright (C) 2014-2015, Siemens AG
-Authors: Andreas Würl, Steffen Weber
+Copyright (C) 2017 TNG Technology Consulting GmbH
+Authors: Andreas Würl, Steffen Weber, Maximilian Huber
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -20,10 +21,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 namespace Fossology\Lib\Dao;
 
 use Fossology\Lib\Db\DbManager;
-use Fossology\Lib\Util\Object;
 use Monolog\Logger;
 
-class TreeDao extends Object
+class TreeDao
 {
   /** @var DbManager */
   private $dbManager;
@@ -33,18 +33,16 @@ class TreeDao extends Object
   public function __construct(DbManager $dbManager)
   {
     $this->dbManager = $dbManager;
-    $this->logger = new Logger(self::className());
+    $this->logger = new Logger(self::class);
   }
 
-  public function getFullPath($itemId, $tableName, $parentId=0)
+  public function getFullPath($itemId, $tableName, $parentId=0, $dropArtifactPrefix=false)
   {
     $statementName = __METHOD__.".".$tableName;
 
-    if ($parentId==$itemId)
-    {
+    if ($parentId==$itemId) {
       return $this->getFullPath($itemId, $tableName);
-    }    
-    else if ($parentId > 0) {
+    } else if ($parentId > 0) {
       $params = array($itemId, $parentId);
       $parentClause = " = $2";
       $parentLoopCondition = "AND (ut.parent != $2)";
@@ -56,10 +54,12 @@ class TreeDao extends Object
     }
 
     $row = $this->dbManager->getSingleRow(
-       $sql= "
-        WITH RECURSIVE file_tree(uploadtree_pk, parent, ufile_name, path, file_path, cycle) AS (
+        $sql= "
+        WITH RECURSIVE file_tree(uploadtree_pk, parent, ufile_name, path, prev_ufile_mode, artifact_path_prefix, file_path, cycle) AS (
           SELECT ut.uploadtree_pk, ut.parent, ut.ufile_name,
             ARRAY[ut.uploadtree_pk],
+            ut.ufile_mode,
+            '',
             CASE WHEN ut.ufile_mode & (1<<28) = 0 THEN ut.ufile_name ELSE '' END,
             false
           FROM $tableName ut
@@ -67,19 +67,39 @@ class TreeDao extends Object
         UNION ALL
           SELECT ut.uploadtree_pk, ut.parent, ut.ufile_name,
             path || ut.uploadtree_pk,
-            CASE WHEN ut.ufile_mode & (1<<28) = 0 THEN ut.ufile_name || '/' || file_path ELSE file_path END,
+            ut.ufile_mode,
+            CASE WHEN prev_ufile_mode & (1<<28) = 0
+             THEN
+              CASE WHEN ut.ufile_mode & (1<<28) = 0
+               THEN ''
+               ELSE artifact_path_prefix
+              END
+             ELSE
+              CASE WHEN ut.ufile_mode & (1<<28) = 0
+               THEN ut.ufile_name || '/' || artifact_path_prefix
+               ELSE artifact_path_prefix
+              END
+            END,
+            CASE WHEN (prev_ufile_mode & (1<<28) = 0 and ut.ufile_mode & (1<<28) = 0)
+             THEN ut.ufile_name || '/' || artifact_path_prefix || file_path
+             ELSE file_path
+            END,
             (ut.uploadtree_pk = ANY(path)) $parentLoopCondition
           FROM $tableName ut, file_tree ft
           WHERE ut.uploadtree_pk = ft.parent AND NOT cycle
         )
-        SELECT file_path from file_tree WHERE parent $parentClause",
+        SELECT artifact_path_prefix, file_path from file_tree WHERE parent $parentClause",
         $params, $statementName);
 
     if (false === $row) {
       throw new \Exception("could not find path of $itemId:\n$sql--".print_r($params,true));
     }
 
-    return $row['file_path'];
+    if (! $dropArtifactPrefix) {
+      return $row['artifact_path_prefix'].$row['file_path'];
+    } else {
+      return $row['file_path'];
+    }
   }
 
   public function getMinimalCoveringItem($uploadId, $tableName)
@@ -100,7 +120,7 @@ class TreeDao extends Object
 
      return $row ? $row['uploadtree_pk'] : 0;
   }
-  
+
   /**
    * @param int $uploadtreeId
    * @return array with keys sha1, md5
@@ -111,7 +131,7 @@ class TreeDao extends Object
         array($uploadtreeId), __METHOD__);
     return array('sha1'=>$pfile['pfile_sha1'],'md5'=>$pfile['pfile_md5']);
   }
-  
+
   public function getRepoPathOfPfile($pfileId, $repo="files")
   {
     $pfileRow = $this->dbManager->getSingleRow('SELECT * FROM pfile WHERE pfile_pk=$1',array($pfileId));

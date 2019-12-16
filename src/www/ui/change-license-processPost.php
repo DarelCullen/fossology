@@ -1,6 +1,6 @@
 <?php
 /***********************************************************
- * Copyright (C) 2014-2015 Siemens AG
+ * Copyright (C) 2014-2018 Siemens AG
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,7 +23,7 @@ use Fossology\Lib\Data\Clearing\ClearingEventTypes;
 use Fossology\Lib\Data\Tree\ItemTreeBounds;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
-define("TITLE_changeLicProcPost", _("Private: Change license file post"));
+define("TITLE_CHANGELICPROCPOST", _("Private: Change license file post"));
 
 class changeLicenseProcessPost extends FO_Plugin
 {
@@ -35,7 +35,7 @@ class changeLicenseProcessPost extends FO_Plugin
   function __construct()
   {
     $this->Name = "change-license-processPost";
-    $this->Title = TITLE_changeLicProcPost;
+    $this->Title = TITLE_CHANGELICPROCPOST;
     $this->DBaccess = PLUGIN_DB_WRITE;
     $this->OutputType = 'JSON';
     $this->OutputToStdout = 1;
@@ -68,8 +68,7 @@ class changeLicenseProcessPost extends FO_Plugin
     pg_free_result($result);
     $buckets_dir = $SysConf['DIRECTORIES']['MODDIR'];
     /** rerun bucket on the file */
-    foreach ($bucketpool_array as $bucketpool)
-    {
+    foreach ($bucketpool_array as $bucketpool) {
       $command = "$buckets_dir/buckets/agent/buckets -r -t $uploadTreeId -p $bucketpool";
       exec($command);
     }
@@ -80,33 +79,57 @@ class changeLicenseProcessPost extends FO_Plugin
    */
   function Output()
   {
-    if ($this->State != PLUGIN_STATE_READY)
-    {
+    if ($this->State != PLUGIN_STATE_READY) {
       return;
     }
     $itemId = $_POST['uploadTreeId'];
-    if (empty($itemId))
-    {
+    if (empty($itemId)) {
       return $this->errorJson("bad item id");
     }
 
     $userId = Auth::getUserId();
     $groupId = Auth::getGroupId();
     $decisionMark = @$_POST['decisionMark'];
-    if(!empty($decisionMark))
-    {
+
+    if (! empty($decisionMark) && $decisionMark == "irrelevant") {
+      if (! is_array($itemId)) {
+        $responseMsg = $this->doMarkIrrelevant($itemId, $groupId, $userId);
+      } else {
+        foreach ($itemId as $uploadTreeId) {
+          $responseMsg = $this->doMarkIrrelevant($uploadTreeId, $groupId,
+            $userId);
+          if (! empty($responseMsg)) {
+            return $responseMsg;
+          }
+        }
+      }
+      if (!empty($responseMsg)) {
+        return $responseMsg;
+      }
+      return new JsonResponse(array('result'=>'success'));
+    }
+
+    if (!empty($decisionMark) && $decisionMark == "deleteIrrelevant") {
       $itemTableName = $this->uploadDao->getUploadtreeTableName($itemId);
       /** @var ItemTreeBounds */
       $itemTreeBounds = $this->uploadDao->getItemTreeBounds($itemId,$itemTableName);
-      $errMsg = $this->clearingDao->markDirectoryAsIrrelevant($itemTreeBounds,$groupId,$userId);
-      if (empty($errMsg))
-      {
+      $errMsg = $this->clearingDao->deleteIrrelevantDecisionsFromDirectory($itemTreeBounds,$groupId,$userId);
+      if (empty($errMsg)) {
         return new JsonResponse(array('result'=>'success'));
       }
       return $this->errorJson($errMsg,$errMsg);
     }
 
     return $this->doEdit($userId,$groupId,$itemId);
+  }
+
+  function doMarkIrrelevant($itemId, $groupId, $userId)
+  {
+    $itemTableName = $this->uploadDao->getUploadtreeTableName($itemId);
+    /** @var ItemTreeBounds */
+    $itemTreeBounds = $this->uploadDao->getItemTreeBounds($itemId,$itemTableName);
+    $errMsg = $this->clearingDao->markDirectoryAsIrrelevant($itemTreeBounds,$groupId,$userId);
+    return $errMsg;
   }
 
   function doEdit($userId,$groupId,$itemId)
@@ -121,21 +144,17 @@ class changeLicenseProcessPost extends FO_Plugin
 
     $jobId = JobAddJob($userId, $groupId, $uploadName, $uploadId);
 
-    if (isset($licenses))
-    {
-      if (!is_array($licenses))
-      {
+    if (isset($licenses)) {
+      if (! is_array($licenses)) {
         return $this->errorJson("bad license array");
       }
-      foreach ($licenses as $licenseId)
-      {
-        if (intval($licenseId) <= 0)
-        {
+      foreach ($licenses as $licenseId) {
+        if (intval($licenseId) <= 0) {
           return $this->errorJson("bad license");
         }
 
         $this->clearingDao->insertClearingEvent($itemId, $userId, $groupId, $licenseId, $removed,
-            ClearingEventTypes::USER, $reportInfo = '', $comment = '', $jobId);
+            ClearingEventTypes::USER, $reportInfo = '', $comment = '', $acknowledgement = '', $jobId);
       }
     }
 
@@ -149,13 +168,15 @@ class changeLicenseProcessPost extends FO_Plugin
     /** after changing one license, purge all the report cache */
     ReportCachePurgeAll();
 
-    //Todo: Change sql statement of fossology/src/buckets/agent/leaf.c line 124 to take the newest valid license, then uncomment this line
+    /**
+     * @todo Change sql statement of fossology/src/buckets/agent/leaf.c line 124 to
+     * take the newest valid license, then uncomment this line
     // $this->ChangeBuckets(); // change bucket accordingly
+     */
 
     if (empty($errorMsg) && ($jq_pk>0)) {
       return new JsonResponse(array("jqid" => $jq_pk));
-    }
-    else {
+    } else {
       return $this->errorJson($errorMsg, 500);
     }
   }
@@ -164,10 +185,7 @@ class changeLicenseProcessPost extends FO_Plugin
   {
     return new JsonResponse(array("error" => $msg), $code);
   }
-
 }
 
 $NewPlugin = new changeLicenseProcessPost;
 $NewPlugin->Initialize();
-
-

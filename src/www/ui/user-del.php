@@ -1,6 +1,7 @@
 <?php
 /***********************************************************
  Copyright (C) 2008-2013 Hewlett-Packard Development Company, L.P.
+ Copyright (C) 2017 Siemens AG
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
@@ -16,7 +17,8 @@
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  ***********************************************************/
 
-define("TITLE_user_del", _("Delete A User"));
+require_once "user-del-helper.php";
+define("TITLE_USER_DEL", _("Delete A User"));
 
 use \Fossology\Lib\Auth\Auth;
 
@@ -29,16 +31,17 @@ class user_del extends FO_Plugin
   function __construct()
   {
     $this->Name       = "user_del";
-    $this->Title      = TITLE_user_del;
+    $this->Title      = TITLE_USER_DEL;
     $this->MenuList   = "Admin::Users::Delete";
     $this->DBaccess   = PLUGIN_DB_ADMIN;
+    $this->dbManager  = $GLOBALS['container']->get('db.manager');
 
     parent::__construct();
   }
 
   /**
    * \brief Delete a user.
-   * 
+   *
    * \return NULL on success, string on failure.
    */
   function Delete($UserId)
@@ -50,13 +53,12 @@ class user_del extends FO_Plugin
     DBCheckResult($result, $sql, __FILE__, __LINE__);
     $row = pg_fetch_assoc($result);
     pg_free_result($result);
-    if (empty($row['user_name']))
-    {
+    if (empty($row['user_name'])) {
       $text = _("User does not exist.");
-      return($text);
+      return ($text);
     }
 
-    /* Delete the users group 
+    /* Delete the users group
      * First look up the users group_pk
      */
     $sql = "SELECT group_pk FROM groups WHERE group_name = '$row[user_name]' LIMIT 1;";
@@ -86,10 +88,9 @@ class user_del extends FO_Plugin
     DBCheckResult($result, $sql, __FILE__, __LINE__);
     $rowCount = pg_num_rows($result);
     pg_free_result($result);
-    if ($rowCount != 0)
-    {
+    if ($rowCount != 0) {
       $text = _("Failed to delete user.");
-      return($text);
+      return ($text);
     }
 
     return(NULL);
@@ -105,18 +106,17 @@ class user_del extends FO_Plugin
     /* If this is a POST, then process the request. */
     $User = GetParm('userid',PARM_TEXT);
     $Confirm = GetParm('confirm',PARM_INTEGER);
-    if (!empty($User))
-    {
-      if ($Confirm != 1) { $rc = "Deletion not confirmed. Not deleted."; }
-      else { $rc = $this->Delete($User); }
-      if (empty($rc))
-      {
+    if (! empty($User)) {
+      if ($Confirm != 1) {
+        $rc = "Deletion not confirmed. Not deleted.";
+      } else {
+        $rc = deleteUser($User, $this->dbManager);
+      }
+      if (empty($rc)) {
         /* Need to refresh the screen */
         $text = _("User deleted.");
         $this->vars['message'] = $text;
-      }
-      else
-      {
+      } else {
         $this->vars['message'] = $rc;
       }
     }
@@ -126,21 +126,17 @@ class user_del extends FO_Plugin
     $sql = "SELECT user_pk,user_name,user_desc FROM users WHERE user_pk != '$currentUserId' AND user_pk != '1' ORDER BY user_name";
     $result = pg_query($PG_CONN, $sql);
     DBCheckResult($result, $sql, __FILE__, __LINE__);
-    if (pg_num_rows($result) == 0)
-    {
+    if (pg_num_rows($result) == 0) {
       $V .= _("No users to delete.");
-    }
-    else
-    {
+    } else {
       /* Build HTML form */
       $V .= _("Deleting a user removes the user entry from the FOSSology system. The user's name, account information, and password will be <font color='red'>permanently</font> removed. (There is no 'undo' to this delete.)<P />\n");
       $V .= "<form name='formy' method='POST'>\n"; // no url = this url
       $V .= _("To delete a user, enter the following information:<P />\n");
       $V .= "<ol>\n";
       $V .= _("<li>Select the user to delete.<br />");
-      $V .= "<select name='userid'>\n";
-      while( $row = pg_fetch_assoc($result))
-      {
+      $V .= "<select name='userid' class='ui-render-select2'>\n";
+      while ($row = pg_fetch_assoc($result)) {
         $V .= "<option value='" . $row['user_pk'] . "'>";
         $V .= $row['user_name'];
         $V .= "</option>\n";
@@ -152,7 +148,7 @@ class user_del extends FO_Plugin
       $V .= "</ol>\n";
 
       $text = _("Delete");
-      $V .= "<input type='submit' value='$text!'>\n";
+      $V .= "<input type='submit' value='$text'>\n";
       $V .= "</form>\n";
     }
     pg_free_result($result);
@@ -160,4 +156,5 @@ class user_del extends FO_Plugin
     return $V;
   }
 }
-$NewPlugin = new user_del;
+
+$NewPlugin = new user_del();

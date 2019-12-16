@@ -12,7 +12,7 @@ CUNIT_LIB = -L $(CUNIT_LIB_DIR) -l focunit
 TEST_LIB_DIR = $(TOP)/src/testing/db/c
 TEST_LIB = -L $(TEST_LIB_DIR) -l fodbreposysconf
 
-CFLAGS_LOCAL = $(FO_CFLAGS) -I$(LOCALAGENTDIR)/ -I./ -I $(TEST_LIB_DIR) -I $(CUNIT_LIB_DIR)
+CFLAGS_LOCAL = $(FO_CFLAGS) -I$(LOCALAGENTDIR)/ -I./ -I $(TEST_LIB_DIR) -I $(CUNIT_LIB_DIR) -DCU_VERSION_P=$(CUNIT_VERSION)
 LDFLAGS_LOCAL = $(FO_LDFLAGS) -lpq $(CUNIT_LIB) -lcunit $(TEST_LIB)
 
 EXE = test_wget_agent
@@ -26,7 +26,7 @@ CHKSRC = $(CHKHDR:%.h=%.c)
 
 all: $(EXE)
 
-$(EXE): libwget_agent.a $(TEST_OBJ_RUN) $(TEST_OBJ) $(CHKHDR) $(CHKSRC) $(VARS) $(DB) $(REPO) $(AGENTLIB) cunit_lib test_lib
+$(EXE): libwget_agent.a $(TEST_OBJ_RUN) $(TEST_OBJ) $(CHKHDR) $(CHKSRC) $(VARS) $(DB) $(REPO) $(AGENTLIB) $(FOLIB) cunit_lib test_lib
 	$(CC) $(TEST_OBJ_RUN) $(TEST_OBJ) $(LOCALAGENTDIR)/libwget_agent.a $(CHKSRC) $(CFLAGS_LOCAL) $(LDFLAGS_LOCAL) -o $@
 
 $(TEST_OBJ_RUN): %.o: %.c

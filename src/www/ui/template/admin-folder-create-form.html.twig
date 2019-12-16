@@ -8,7 +8,7 @@
     <ol>
         <li>
             {{ "Select the parent folder:"|trans }}
-            <select name='parentid'>
+            <select name='parentid' class="ui-render-select2">
                 {{ folderOptions }}
             </select>
             <P />
@@ -25,5 +25,5 @@
             <INPUT type='text' name='description' size=80 />
         </li>
     </ol>
-    <input type='submit' value='{{ "Create"|trans }}!'>
+    <input type='submit' value='{{ "Create"|trans }}'>
 </form>

@@ -21,10 +21,20 @@ $(document).ready(function() {
             option.value = key;
             folderchild.append(option);
           });
+          sortList('#foldercontent option');
         })
         .fail(failed);
     return false;
   });
+  $('#foldercontent').click(function(event){
+    if (this.value == -1) {
+      $('#movebutton').attr('disabled',true);
+    }
+    else {
+      $('#movebutton').attr('disabled',false);
+    }
+  });
 
   $('.clickable-folder').first().trigger('click');
 });
+

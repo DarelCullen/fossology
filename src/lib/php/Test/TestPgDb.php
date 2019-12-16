@@ -43,8 +43,7 @@ class TestPgDb extends TestAbstractDb
     $dbName = strtolower($dbName);
     $testDbFactory = new \TestDbFactory();
     $this->sys_conf = $sysConf;
-    if(empty($this->sys_conf))
-    {
+    if (empty($this->sys_conf)) {
       $this->sys_conf = $testDbFactory->setupTestDb($dbName);
       $dbName = $testDbFactory->getDbName($this->sys_conf);
     }
@@ -59,8 +58,9 @@ class TestPgDb extends TestAbstractDb
     $this->logFileName = dirname(dirname(dirname(dirname(dirname(__FILE__))))) . 'db.pg.log';
     $logger->pushHandler(new StreamHandler($this->logFileName, Logger::DEBUG));
 
-    $container->get('db.manager')->setDriver(new Postgres($this->connection));
     $this->dbManager = $container->get('db.manager');
+    $postgres = new Postgres($this->connection);
+    $this->dbManager->setDriver($postgres);
     $this->dbManager->queryOnce("DEALLOCATE ALL");
     $this->dropAllTables();
     $this->dropAllSequences();
@@ -77,7 +77,7 @@ class TestPgDb extends TestAbstractDb
     $res = $this->dbManager->execute(__METHOD__.'.get',array('public','BASE TABLE'));
     $tableNames = $this->dbManager->fetchAll($res);
     $this->dbManager->freeResult($res);
-    foreach($tableNames as $row){
+    foreach ($tableNames as $row) {
       $name = $row['table_name'];
       $this->dbManager->queryOnce("DROP TABLE IF EXISTS $name CASCADE",$sqlLog=__METHOD__.".$name");
     }
@@ -90,7 +90,7 @@ class TestPgDb extends TestAbstractDb
     $res = $this->dbManager->execute($stmt,array('public'));
     $tableNames = $this->dbManager->fetchAll($res);
     $this->dbManager->freeResult($res);
-    foreach($tableNames as $row){
+    foreach ($tableNames as $row) {
       $name = $row['sequence_name'];
       $this->dbManager->queryOnce("DROP SEQUENCE $name CASCADE",$sqlLog=__METHOD__.".$name");
     }
@@ -114,11 +114,9 @@ class TestPgDb extends TestAbstractDb
   function isInFossyGroup()
   {
     $gid_array = posix_getgroups();
-    foreach($gid_array as $gid)
-    {
+    foreach ($gid_array as $gid) {
       $gid_info = posix_getgrgid($gid);
-      if ($gid_info['name'] === 'fossy')
-      {
+      if ($gid_info['name'] === 'fossy') {
         return true;
       }
     }
@@ -126,31 +124,30 @@ class TestPgDb extends TestAbstractDb
     $uid_info = posix_getpwuid($uid);
     return ($uid_info['name'] !== 'root');
   }
-  
+
   /**
    * @param array $tableList
-   * @param bool $invert 
+   * @param bool $invert
    */
   public function createPlainTables($tableList, $invert=false)
   {
     $coreSchemaFile = $this->dirnameRec(__FILE__, 4) . '/www/ui/core-schema.dat';
     $Schema = array();
     require($coreSchemaFile);
-    foreach($Schema['TABLE'] as $tableName=>$tableCols){
-      if ($invert^!in_array($tableName, $tableList) || array_key_exists($tableName, $Schema['INHERITS'])){
+    foreach ($Schema['TABLE'] as $tableName=>$tableCols) {
+      if ($invert^!in_array($tableName, $tableList) || array_key_exists($tableName, $Schema['INHERITS'])) {
         continue;
       }
       $this->dbManager->queryOnce("CREATE TABLE \"$tableName\" ()");
       $sqlAddArray = array();
-      foreach ($tableCols as $attributes)
-      {
+      foreach ($tableCols as $attributes) {
         $sqlAdd = preg_replace('/ DEFAULT .*/','',$attributes["ADD"]);
         $sqlAddArray[] = $sqlAdd;
       }
       $this->dbManager->queryOnce(implode(";\n",$sqlAddArray));
     }
   }
-  
+
   public function resetSequenceAsMaxOf($sequenceName, $tableName, $columnName)
   {
     $this->dbManager->queryOnce("SELECT setval('$sequenceName', (SELECT MAX($columnName) FROM $tableName))");
@@ -173,27 +170,24 @@ class TestPgDb extends TestAbstractDb
   {
     $this->applySchema('CONSTRAINT', $cList, $invert);
   }
-  
+
   /**
    * @param string[] $tableList array of table names or empty for all tables
    */
   public function createInheritedTables($tableList=array())
   {
     $table = 'license_candidate';
-    if((empty($tableList) || in_array($table, $tableList)) && !$this->dbManager->existsTable($table))
-    {
+    if ((empty($tableList) || in_array($table, $tableList)) && !$this->dbManager->existsTable($table)) {
       $this->dbManager->queryOnce("CREATE TABLE $table (group_fk integer) INHERITS (license_ref)");
     }
     $coreSchemaFile = $this->dirnameRec(__FILE__, 4) . '/www/ui/core-schema.dat';
     $Schema = array();
     require($coreSchemaFile);
-    foreach ($Schema['INHERITS'] as $table=>$fromTable)
-    {
+    foreach ($Schema['INHERITS'] as $table=>$fromTable) {
       if ($fromTable=='master_ars' || !empty($tableList) && !in_array($table, $tableList) ) {
         continue;
       }
-      if (!$this->dbManager->existsTable($table) && $this->dbManager->existsTable($fromTable))
-      {
+      if (!$this->dbManager->existsTable($table) && $this->dbManager->existsTable($fromTable)) {
         $this->dbManager->queryOnce("CREATE TABLE \"$table\" () INHERITS (\"$fromTable\")");
       }
     }
@@ -201,13 +195,10 @@ class TestPgDb extends TestAbstractDb
 
   public function createInheritedArsTables($agents)
   {
-    foreach ($agents as $agent)
-    {
-      if (!$this->dbManager->existsTable($agent . '_ars'))
-      {
+    foreach ($agents as $agent) {
+      if (!$this->dbManager->existsTable($agent . '_ars')) {
         $this->dbManager->queryOnce("create table " . $agent . "_ars() inherits(ars_master)");
       }
     }
   }
-
 }

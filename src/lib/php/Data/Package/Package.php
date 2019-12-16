@@ -19,9 +19,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 namespace Fossology\Lib\Data\Package;
 
 use Fossology\Lib\Data\Upload\Upload;
-use Fossology\Lib\Util\Object;
 
-class Package extends Object {
+class Package
+{
 
   /** @var int */
   private $id;
@@ -37,7 +37,8 @@ class Package extends Object {
    * @param string $name
    * @param Upload[] $uploads
    */
-  public function __construct($id, $name, $uploads) {
+  public function __construct($id, $name, $uploads)
+  {
     $this->id = $id;
     $this->uploads = $uploads;
     $this->name = $name;
@@ -66,5 +67,4 @@ class Package extends Object {
   {
     return $this->uploads;
   }
-
-} 
+}

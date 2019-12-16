@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2018, Siemens AG
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -20,9 +20,9 @@ namespace Fossology\Lib\Data\Clearing;
 
 use Fossology\Lib\Data\AgentRef;
 use Fossology\Lib\Data\LicenseRef;
-use Fossology\Lib\Util\Object;
 
-class AgentClearingEvent extends Object implements LicenseClearing {
+class AgentClearingEvent implements LicenseClearing
+{
   /** @var LicenseRef */
   private $licenseRef;
   /** @var AgentRef */
@@ -38,7 +38,9 @@ class AgentClearingEvent extends Object implements LicenseClearing {
    * @param int $matchId
    * @param null|int $percentage
    */
-  public function __construct(LicenseRef $licenseRef, AgentRef $agentRef, $matchId, $percentage) {
+  public function __construct(LicenseRef $licenseRef, AgentRef $agentRef,
+    $matchId, $percentage)
+  {
     $this->licenseRef = $licenseRef;
     $this->agentRef = $agentRef;
     $this->matchId = $matchId;
@@ -110,9 +112,18 @@ class AgentClearingEvent extends Object implements LicenseClearing {
   }
 
   /**
+   * @return string
+   */
+  public function getAcknowledgement()
+  {
+    return "";
+  }
+
+  /**
    * @return int $timeStamp
    */
-  public function getTimeStamp(){
+  public function getTimeStamp()
+  {
     return time();
   }
 

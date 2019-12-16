@@ -24,7 +24,7 @@ LOCALAGENTDIR = ../../agent
 
 TESTDIR = $(TOP)/src/testing/lib/c
 TESTLIB = -L$(TESTDIR) -l focunit -lgthread-2.0 -lgio-2.0 -lgobject-2.0
-CFLAGS_LOCAL = $(FO_CFLAGS) -I. -I$(LOCALAGENTDIR) -I $(TESTDIR)
+CFLAGS_LOCAL = $(FO_CFLAGS) -I. -I$(LOCALAGENTDIR) -I $(TESTDIR) -DCU_VERSION_P=$(CUNIT_VERSION)
 LDFLAGS_LOCAL = $(FO_LDFLAGS) -lpcre -lcunit $(TESTLIB)
 DEF = -DLOG_DIR='"$(LOGDIR)"' \
       -DDEFAULT_SETUP='"$(SYSCONFDIR)"' \
@@ -58,7 +58,7 @@ coverage: testRun.c $(OBJECTS) $(COV) $(VARS) $(FOLIB) fossology_testconfig $(EX
 	./$(EXE)
 	$(call coverage-report-html,$(LOCALAGENTDIR))
 
-$(EXE): testRun.c $(OBJECTS) $(LIB) $(FOCUNIT)
+$(EXE): testRun.c $(OBJECTS) $(LIB) $(FOCUNIT) $(FOLIB)
 	$(CC) $< -o $(EXE) $(OBJECTS) $(LOCALAGENTDIR)/$(LIB) $(CFLAGS_LOCAL) $(LDFLAGS_LOCAL)
 
 $(LIB):

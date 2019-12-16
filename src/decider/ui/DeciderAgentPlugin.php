@@ -1,6 +1,6 @@
 <?php
 /***********************************************************
- * Copyright (C) 2014-2015, Siemens AG
+ * Copyright (C) 2014-2018, Siemens AG
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,11 +21,16 @@ use Symfony\Component\HttpFoundation\Request;
 
 include_once(__DIR__ . "/../agent/version.php");
 
+/**
+ * @class DeciderAgentPlugin
+ * @brief UI plugin for DeciderAgent
+ */
 class DeciderAgentPlugin extends AgentPlugin
 {
   const RULES_FLAG = "-r";
 
-  function __construct() {
+  function __construct()
+  {
     $this->Name = "agent_decider";
     $this->Title = _("Automatic Concluded License Decider, based on scanners Matches");
     $this->AgentName = AGENT_DECIDER_NAME;
@@ -33,47 +38,54 @@ class DeciderAgentPlugin extends AgentPlugin
     parent::__construct();
   }
 
-  
+
   /**
-   * @param array $vars
-   * @return string
+   * @brief Render HTML from template
+   * @param array $vars Variables using in template
+   * @return string HTML rendered from agent_decider.html.twig template
    */
   public function renderContent(&$vars)
   {
     $renderer = $GLOBALS['container']->get('twig.environment');
     $vars['isNinkaInstalled'] = false;
-    if($ninkaUi=plugin_find('agent_ninka'))
-    {
+    if ($ninkaUi=plugin_find('agent_ninka')) {
       $vars['isNinkaInstalled'] = $ninkaUi->isNinkaInstalled();
     }
     return $renderer->loadTemplate('agent_decider.html.twig')->render($vars);
   }
-  
+
   /**
-   * @param array $vars
-   * @return string
+   * @brief Render footer HTML
+   * @param array $vars Variables using in template
+   * @return string Footer HTML
    */
   public function renderFoot(&$vars)
   {
     return "";
   }
 
-    /**
-     * @param int $jobId
-     * @param int $uploadId
-     * @param string $errorMsg
-     * @param Request $request
-     * @return string
-     */
+  /**
+   * @brief Schedule decider agent
+   * @param int $jobId
+   * @param int $uploadId
+   * @param string $errorMsg
+   * @param Request $request Session request
+   * @return string
+   */
   public function scheduleAgent($jobId, $uploadId, &$errorMsg, $request)
   {
     $dependencies = array();
-   
+
     $rules = $request->get('deciderRules') ?: array();
+    $agents = $request->get('agents') ?: array();
+    if (in_array('agent_nomos', $agents)) {
+      $checkAgentNomos = true;
+    } else {
+      $checkAgentNomos = $request->get('Check_agent_nomos') ?: false;
+    }
     $rulebits = 0;
-    
-    foreach($rules as $rule)
-    {
+
+    foreach ($rules as $rule) {
       switch ($rule) {
         case 'nomosInMonk':
           $dependencies[] = 'agent_nomos';
@@ -87,24 +99,36 @@ class DeciderAgentPlugin extends AgentPlugin
           $rulebits |= 0x2;
           break;
         case 'reuseBulk':
-          $dependencies[] = 'agent_reuser';
+          $dependencies[] = 'agent_nomos';
+          $dependencies[] = 'agent_monk';
           $rulebits |= 0x4;
+          break;
+        case 'ojoNoContradiction':
+          if ($checkAgentNomos) {
+            $dependencies[] = 'agent_nomos';
+          }
+          $dependencies[] = 'agent_ojo';
+          $rulebits |= 0x10;
           break;
         case 'wipScannerUpdates':
           $this->addScannerDependencies($dependencies, $request);
           $rulebits |= 0x8;
       }
     }
-    
-    if (empty($rulebits))
-    {
+
+    if (empty($rulebits)) {
       return 0;
     }
 
     $args = self::RULES_FLAG.$rulebits;
     return parent::AgentAdd($jobId, $uploadId, $errorMsg, array_unique($dependencies), $args);
   }
-  
+
+  /**
+   * @brief Add dependencies on DeciderAgent
+   * @param array $dependencies
+   * @param Request $request
+   */
   protected function addScannerDependencies(&$dependencies, Request $request)
   {
     $agentList = $request->get('agents') ?: array();
@@ -121,15 +145,15 @@ class DeciderAgentPlugin extends AgentPlugin
       }
     }
   }
-  
+
   /**
-   * @override
+   * @copydoc Fossology::Lib::Plugin::AgentPlugin::preInstall()
+   * @see Fossology::Lib::Plugin::AgentPlugin::preInstall()
    */
   public function preInstall()
   {
     menu_insert("ParmAgents::" . $this->Title, 0, $this->Name);
   }
-
 }
 
 register_plugin(new DeciderAgentPlugin());

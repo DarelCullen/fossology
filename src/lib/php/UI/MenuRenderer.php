@@ -18,16 +18,14 @@
 
 namespace Fossology\Lib\UI;
 
-use Fossology\Lib\Util\Object;
-
-class MenuRenderer extends Object
+class MenuRenderer
 {
    /**
    * @param $menu     menu list need to show as list
    * @param $parm     a list of parameters to add to the URL.
    * @param $uploadId upload id
    */
-  public static function menuToActiveSelect($menu, &$parm, $uploadId = "") 
+  public static function menuToActiveSelect($menu, &$parm, $uploadId = "")
   {
     if (empty($menu)) {
       return '';
@@ -36,11 +34,10 @@ class MenuRenderer extends Object
     $showFullName = isset($_SESSION) && array_key_exists('fullmenudebug', $_SESSION) && $_SESSION['fullmenudebug'] == 1;
     $optionsOut = "";
 
-    foreach($menu as $Val) {
+    foreach ($menu as $Val) {
       if (!empty($Val->HTML)) {
         $entry = $Val->HTML;
-      }
-      else if (!empty($Val->URI)) {
+      } else if (!empty($Val->URI)) {
         if (!empty($uploadId) && "tag" == $Val->URI) {
           $tagstatus = TagStatus($uploadId);
           if (0 == $tagstatus) {  // tagging on this upload is disabled
@@ -53,19 +50,16 @@ class MenuRenderer extends Object
           $entry .= ' title="' . htmlentities($Val->Title, ENT_QUOTES) . '"';
         }
         $entry .= '>'. $Val->getName($showFullName).'</option>';
-      }
-      else {
+      } else {
         $entry = "<option>" . $Val->getName($showFullName) . "</option>";
       }
       $optionsOut .= $entry;
     }
-    
-    if (plugin_find_id('showjobs') >= 0)
-    {
+
+    if (plugin_find_id('showjobs') >= 0) {
       $optionsOut .= '<option value="' . Traceback_uri() . '?mod=showjobs&upload='.$uploadId.'" title="' . _("Scan History") . '" >'._("History").'</option>';
     }
-    
-    return '<select class="goto-active-option"><option>-- select action --</option>'.$optionsOut.'</select>';
- }
-}
 
+    return '<select class="goto-active-option"><option disabled selected>-- select action --</option>'.$optionsOut.'</select>';
+  }
+}

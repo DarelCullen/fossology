@@ -24,10 +24,9 @@ use Fossology\Lib\Data\AgentRef;
 use Fossology\Lib\Data\LicenseMatch;
 use Fossology\Lib\Data\LicenseRef;
 use Fossology\Lib\Data\Tree\ItemTreeBounds;
-use Fossology\Lib\Db\DbManager;
 use Fossology\Lib\Test\TestPgDb;
 
-class LicenseDaoTest extends \PHPUnit_Framework_TestCase
+class LicenseDaoTest extends \PHPUnit\Framework\TestCase
 {
   /** @var TestLiteDb */
   private $testDb;
@@ -83,7 +82,7 @@ class LicenseDaoTest extends \PHPUnit_Framework_TestCase
     $expected = array( new LicenseMatch($pfileId, $licenseRef, $agentRef, $licenseFileId, $matchPercent) );
 
     assertThat($matches, equalTo($expected));
-    assertThat($matches[0], is(anInstanceOf(LicenseMatch::classname())) );
+    assertThat($matches[0], is(anInstanceOf(LicenseMatch::class)) );
     $this->addToAssertionCount(\Hamcrest\MatcherAssert::getCount()-$this->assertCountBefore);
   }
 
@@ -142,8 +141,7 @@ class LicenseDaoTest extends \PHPUnit_Framework_TestCase
     $this->dbManager->prepare($stmt,"SELECT rf_pk,rf_shortname FROM license_ref");
     $licRes = $this->dbManager->execute($stmt);
     $licAll = array();
-    while ($erg=$this->dbManager->fetchArray($licRes))
-    {
+    while ($erg=$this->dbManager->fetchArray($licRes)) {
       $licAll[$erg['rf_pk']] = $erg['rf_shortname'];
     }
     $this->dbManager->freeResult($licRes);
@@ -155,8 +153,7 @@ class LicenseDaoTest extends \PHPUnit_Framework_TestCase
     $left=2009;
     $right=2014;
     $mydate = "'2014-06-04 14:01:30.551093+02'";
-    foreach ($licAll as $licenseRefNumber=>$shortname)
-    {
+    foreach ($licAll as $licenseRefNumber=>$shortname) {
       $this->dbManager->queryOnce("INSERT INTO license_file (rf_fk, agent_fk, rf_match_pct, rf_timestamp, pfile_fk)
             VALUES ($licenseRefNumber, $agentId, $matchPercent, $mydate, $pfileId)");
     }
@@ -300,16 +297,16 @@ class LicenseDaoTest extends \PHPUnit_Framework_TestCase
 
     $key = "project.tar.gz/project.tar/project/folderB/subBfolderB/subBBsubBfolderA/BBBfileA";
     $this->assertArrayHasKey($key, $result);
-    $expected = array($licAll[$rf_pk_all[0]]);
-    assertThat($result[$key], is(equalTo($expected)));
+    $expected = $licAll[$rf_pk_all[0]];
+    assertThat($result[$key]['scanResults'][0], is(equalTo($expected)));
 
     $key = "project.tar.gz/project.tar/project/folderB/subBfolderB/subBBsubBfolderA/BBBfileB";
     $this->assertArrayHasKey($key, $result);
 
     $key = "project.tar.gz/project.tar/project/folderB/subBfolderB/subBBsubBfolderA/BBBfileC";
     $this->assertArrayHasKey($key, $result);
-    $this->assertContains($licAll[$rf_pk_all[0]],$result[$key]);
-    $this->assertContains($licAll[$rf_pk_all[1]],$result[$key]);
+    $this->assertContains($licAll[$rf_pk_all[0]],$result[$key]['scanResults']);
+    $this->assertContains($licAll[$rf_pk_all[1]],$result[$key]['scanResults']);
 
     $key = "project.tar.gz";
     $this->assertArrayHasKey($key, $result);
@@ -357,7 +354,8 @@ class LicenseDaoTest extends \PHPUnit_Framework_TestCase
     $this->addToAssertionCount(\Hamcrest\MatcherAssert::getCount()-$this->assertCountBefore);
   }
 
-  public function testIsNewLicense(){
+  public function testIsNewLicense()
+  {
     $groupId = 401;
     $this->testDb->createPlainTables(array('license_ref'));
     $this->testDb->insertData_license_ref();

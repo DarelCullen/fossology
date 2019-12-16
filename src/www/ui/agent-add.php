@@ -40,29 +40,27 @@ class AgentAdder extends DefaultPlugin
    * @param Request $request
    * @return Response
    */
-  protected function handle(Request $request) {
+  protected function handle(Request $request)
+  {
     $folderId = intval($request->get('folder'));
     if (empty($folderId)) {
       $folderId = FolderGetTop();
     }
     $uploadId = intval($request->get('upload'));
     $agents = $request->get('agents') ?: '';
+    $vars = [];
 
-    if (!empty($uploadId) && !empty($agents) && is_array($agents))
-    {
-      $rc = $this->agentsAdd($uploadId,$agents,$request);
-      if (empty($rc))
-      {
+    if (! empty($uploadId) && ! empty($agents) && is_array($agents)) {
+      $rc = $this->agentsAdd($uploadId, $agents, $request);
+      if (is_numeric($rc)) {
         $status = GetRunnableJobList();
         $scheduler_msg = empty($status) ? _("Is the scheduler running? ") : '';
         $url = Traceback_uri() . "?mod=showjobs&upload=$uploadId";
         $text = _("Your jobs have been added to job queue.");
         $linkText = _("View Jobs");
-        $msg = "$scheduler_msg"."$text <a href=\"$url\">$linkText</a>";
+        $msg = "$scheduler_msg" . "$text <a href=\"$url\">$linkText</a>";
         $vars['message'] = $msg;
-      }
-      else
-      {
+      } else {
         $text = _("Scheduling of Agent(s) failed: ");
         $vars['message'] = $text.$rc;
       }
@@ -75,12 +73,11 @@ class AgentAdder extends DefaultPlugin
     $vars['folderListUploads'] = FolderListUploads_perm($folderId, Auth::PERM_WRITE);
     $vars['baseUri'] = Traceback_uri();
     $vars['uploadId'] = $uploadId;
-    
+
     $parmAgentList = MenuHook::getAgentPluginNames("ParmAgents");
-    $out =  '<ol>';
+    $out = '<ol>';
     $parmAgentFoots = '';
-    foreach($parmAgentList as $parmAgent)
-    {
+    foreach ($parmAgentList as $parmAgent) {
       $agent = plugin_find($parmAgent);
       $out .= "<br/><b>".$agent->AgentName.":</b><br/>";
       $out .= $agent->renderContent($vars);
@@ -89,62 +86,66 @@ class AgentAdder extends DefaultPlugin
     $out .= '</ol>';
     $vars['out'] = $out;
     $vars['outFoot'] = '<script language="javascript"> '.$parmAgentFoots.'</script>';
-    
+
     return $this->render('agent_adder.html.twig', $this->mergeWithDefault($vars));
   }
-  
+
   /**
    * @brief Add an upload to multiple agents.
    * @param int $uploadId
    * @param string[] $agentsToStart - list of agents
-   * @return NULL on success, error message string on failure
+   * @return integer Job ID on success, error message string on failure
    */
   private function agentsAdd($uploadId, $agentsToStart, Request $request)
   {
-    if (!is_array($agentsToStart)) {
+    if (! is_array($agentsToStart)) {
       return "bad parameters";
     }
-    if (!$uploadId) {
+    if (! $uploadId) {
       return "agent-add.php AgentsAdd(): No upload_pk specified";
     }
-    
+
     /* @var $upload Upload */
     $upload = $GLOBALS['container']->get('dao.upload')->getUpload($uploadId);
-    if ($upload===null)
-    {
+    if ($upload===null) {
       return _("Upload") . " " . $uploadId . " " .  _("not found");
     }
-
     $agents = array();
     $parmAgentList = MenuHook::getAgentPluginNames("ParmAgents");
     $plainAgentList = MenuHook::getAgentPluginNames("Agents");
     $agentList = array_merge($plainAgentList, $parmAgentList);
-    foreach($agentList as $agentName) {
-      if (in_array($agentName, $agentsToStart))
-      {
+    foreach ($agentList as $agentName) {
+      if (in_array($agentName, $agentsToStart)) {
         $agents[$agentName] = plugin_find($agentName);
       }
-    }
-    if (count($agents)==0)
-    {
-      return _("no valid agent specified");
     }
 
     $jobId = JobAddJob(Auth::getUserId(), Auth::getGroupId(), $upload->getFilename(), $uploadId);
     $errorMsg = '';
-    foreach($parmAgentList as $parmAgent) {
+    foreach ($parmAgentList as $parmAgent) {
       $agent = plugin_find($parmAgent);
       $agent->scheduleAgent($jobId, $uploadId, $errorMsg, $request);
     }
 
-    foreach($agents as &$agent)
-    {
+    foreach ($agents as &$agent) {
       $rv = $agent->AgentAdd($jobId, $uploadId, $errorMsg, array());
       if ($rv == -1) {
         return $errorMsg;
       }
     }
-    return null;
+    return $jobId;
+  }
+
+  /**
+   * @brief Add an upload to multiple agents (wrapper for agentsAdd()).
+   * @param int $uploadId
+   * @param string[] $agentsToStart - list of agents
+   * @return integer Job ID on success, error message string on failure
+   * @sa agentsAdd()
+   */
+  public function scheduleAgents($uploadId, $agentsToStart, Request $request)
+  {
+    return $this->agentsAdd($uploadId, $agentsToStart, $request);
   }
 }
 

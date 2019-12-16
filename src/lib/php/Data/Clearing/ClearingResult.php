@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2018, Siemens AG
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -21,7 +21,9 @@ namespace Fossology\Lib\Data\Clearing;
 use Fossology\Lib\Data\LicenseRef;
 use Fossology\Lib\Exception;
 
-class ClearingResult implements LicenseClearing {
+class ClearingResult implements LicenseClearing
+{
+
   const AGENT_DECISION_TYPE = 'agent';
 
   /** @var ClearingEvent */
@@ -34,9 +36,12 @@ class ClearingResult implements LicenseClearing {
    * @param AgentClearingEvent[] $agentDecisionEvents
    * @throws Exception
    */
-  public function __construct($licenseDecisionEvent, $agentDecisionEvents=array()) {
+  public function __construct($licenseDecisionEvent,
+    $agentDecisionEvents = array())
+  {
     if (($licenseDecisionEvent === null) && (count($agentDecisionEvents) == 0)) {
-      throw new Exception("cannot create ClearingEvent without any event contained");
+      throw new Exception(
+        "cannot create ClearingEvent without any event contained");
     }
 
     $this->clearingEvent = $licenseDecisionEvent;
@@ -98,6 +103,14 @@ class ClearingResult implements LicenseClearing {
   public function getReportinfo()
   {
     return isset($this->clearingEvent) ? $this->clearingEvent->getReportinfo() : '';
+  }
+
+  /**
+   * @return string
+   */
+  public function getAcknowledgement()
+  {
+    return isset($this->clearingEvent) ? $this->clearingEvent->getAcknowledgement() : '';
   }
 
   /**

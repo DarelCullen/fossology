@@ -16,6 +16,7 @@ INSERT INTO agent (agent_pk, agent_name, agent_rev, agent_desc, agent_enabled, a
 INSERT INTO agent (agent_pk, agent_name, agent_rev, agent_desc, agent_enabled, agent_parms, agent_ts) VALUES (9, 'buckets', 'trunk.271e3e', '(null)', true, NULL, '2014-08-07 09:53:35.042107+00');
 INSERT INTO agent (agent_pk, agent_name, agent_rev, agent_desc, agent_enabled, agent_parms, agent_ts) VALUES (10, 'adj2nest', 'trunk.271e3e', '(null)', true, NULL, '2014-08-07 09:53:35.048305+00');
 INSERT INTO agent (agent_pk, agent_name, agent_rev, agent_desc, agent_enabled, agent_parms, agent_ts) VALUES (11, 'pkgagent', 'trunk.271e3e', '(null)', true, NULL, '2014-08-07 09:53:35.054371+00');
+INSERT INTO agent (agent_pk, agent_name, agent_rev, agent_desc, agent_enabled, agent_parms, agent_ts) VALUES (12, 'ojo', 'trunk.271e3e', '(null)', true, NULL, '2014-08-07 09:53:35.054371+00');
 INSERT INTO mimetype (mimetype_pk, mimetype_name) VALUES (1, 'application/gzip');
 INSERT INTO mimetype (mimetype_pk, mimetype_name) VALUES (2, 'application/x-gzip');
 INSERT INTO mimetype (mimetype_pk, mimetype_name) VALUES (3, 'application/x-compress');
@@ -58,52 +59,62 @@ INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_size, pfile_mimetypefk
 INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_size, pfile_mimetypefk) VALUES (9, 'F703E0197FB6C5BD0C8DFDCC115A0231', '5DAFC9C82988A81413B995210B668CF5CF5975FF', 16845, 10);
 INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_size, pfile_mimetypefk) VALUES (10, '1E035D39ED1AF3B40164BACB620C21CD', '226B68B9DFBB7AA72DB1A8540A175988F0963EE2', 16884, 30);
 INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_size, pfile_mimetypefk) VALUES (351, '8E913E594D24FF3AEABE350107D97815', 'C518CE1658140B65FA0132AD1130CB91512416BF', 35829, 31);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (755, 'E7295A5773D0EA17D53CBE6293924DD4', '93247C8DB814F0A224B75B522C1FA4DC92DC3078', 'E29ABC32DB8B6241D598BC7C76681A7623D176D85F99E738A56C0CB684C367E1', 10240, 12);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (756, 'C655F0AD3E4D3F90D8EE0541DD636E2E', 'D62DCD25DC68180758FD1C064ADC91AB70A78CB1', '8F39AC8ADD8CD0C0C2BF8924CE3B24F4B2760B8723BFD4205A49FB142490A355', 34, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (757, '293BAAFD27959F52ED53C8FD28C6541B', 'B7C67F06CB898E964D4E8A87B1607FE9C2237DA4', '457F2C15805939FFEF15E43133C938DAEC11CFCA6C357B3BCD211859074322B2', 34, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (758, '95405535F6607638FC8B344F369D8CA9', 'FBE3181FD0ADDBD6E64B1FF6CAE1223A7DACB836', '77949BC4E251CF4F0BAD9C5DC8C44C5803BC50A7E73F3B5DCAF985DEBE0E93B4', 64, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (759, 'AA4879E93BB4CA852ED957E3E008434D', '562A730AC23D9E070A6DE27D026DDC3E0D8D4C70', '2C04CC77BA63B2F1165A1CB2AD220B5A43E23DA62A5FFD9E6054B7E2A7F50B02', 38, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (760, '44DA1A7427FBD7AF0DE6D0413755DFB4', 'AAC17F449140406C1F130E89B15773FCFE1825AB', '4DC26FAFC73682D762428CA3D06C2CF2F2301F90D48B5E3A93FF0D0BE52755F5', 42, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (761, 'E47AA02935A589FADA86489705E0E0F0', '8D59ECB1B531ED8FA2AC82B6B73317BACFFA7C03', '31D1AE50E86973757AD00D81744BA958B398C8B02013B5ADDF76633AF95809FB', 41, NULL);
+INSERT INTO pfile (pfile_pk, pfile_md5, pfile_sha1, pfile_sha256, pfile_size, pfile_mimetypefk) VALUES (762, 'C3FCE1E6841BACBDE991EA1D00C07F0E', 'DFC1EA008F7C5EBE82FFA09A7990ACA1EEF1787F', '8C53016213F6B59AEA597129CBEF7A3972F700A2754212B6ADA256DE6ED17E9A', 62, NULL);
 INSERT INTO upload (upload_pk, upload_desc, upload_filename, user_fk, upload_mode, upload_ts, pfile_fk, upload_origin, uploadtree_tablename, expire_date, expire_action, public_perm) VALUES (1, '', 'A.zip', 2, 104, '2014-08-07 09:57:19.18654+00', 1, 'A.zip', 'uploadtree_a', NULL, NULL, 0);
 INSERT INTO upload (upload_pk, upload_desc, upload_filename, user_fk, upload_mode, upload_ts, pfile_fk, upload_origin, uploadtree_tablename, expire_date, expire_action, public_perm) VALUES (2, '', 'B.zip', 2, 104, '2014-08-07 09:57:26.512497+00', 9, 'B.zip', 'uploadtree_a', NULL, NULL, 0);
 INSERT INTO upload (upload_pk, upload_desc, upload_filename, user_fk, upload_mode, upload_ts, pfile_fk, upload_origin, uploadtree_tablename, expire_date, expire_action, public_perm) VALUES (3, '', 'C.zip', 2, 104, '2014-08-07 09:57:26.512497+00', 9, 'C.zip', 'uploadtree_a', NULL, NULL, 0);
+INSERT INTO upload (upload_pk, upload_desc, upload_filename, user_fk, upload_mode, upload_ts, pfile_fk, upload_origin, uploadtree_tablename, expire_date, expire_action, public_perm) VALUES (44, '', 'spdx.tar', 2, 104, '2014-08-07 09:57:26.512497+00', 755, 'spdx.tar', 'uploadtree_a', NULL, NULL, 0);
 INSERT INTO bucketpool (bucketpool_pk, bucketpool_name, version, active, description) VALUES (1, 'GPL Demo bucket pool', 1, 'Y', 'Demonstration of a very simple GPL/non-gpl bucket pool');
 INSERT INTO bucket_def (bucket_pk, bucket_name, bucket_color, bucket_reportorder, bucket_evalorder, bucketpool_fk, bucket_type, bucket_regex, bucket_filename, stopon, applies_to) VALUES (1, 'GPL Licenses (Demo)', 'orange', 50, 50, 1, 3, '(affero|gpl)', NULL, 'N', 'f');
 INSERT INTO bucket_def (bucket_pk, bucket_name, bucket_color, bucket_reportorder, bucket_evalorder, bucketpool_fk, bucket_type, bucket_regex, bucket_filename, stopon, applies_to) VALUES (2, 'non-gpl (Demo)', 'yellow', 50, 1000, 1, 99, NULL, NULL, 'N', 'f');
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (1, 8, 3, 'copyright (c) 1993-2009, all rights reserved. since doc software is open-source, freely available software, you are free to use, modify, copy, and distribute--perpetually and irrevocably--the doc softw', '0xc94dcc0ecf38ec1b', 'statement', 342, 543);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (2, 8, 3, 'modified versions of this software. you must, however, include this copyright statement along with any code built using doc software that you release. no copyright statement needs to be provided if you', '0x3a910990f114f12f', 'statement', 632, 833);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (3, 8, 3, 'maintained by the doc group at the institute for software integrated systems (isis) and the center for distributed object computing of washington university, st. louis for the development of open-sourc', '0x39f39190219b296f', 'statement', 1563, 1764);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (4, 8, 3, 'written permission from washington university, uc irvine, or vanderbilt university. this license grants no permission to call products or services derived from this source ace(tm), tao(tm), ciao(tm), d', '0xd9cce4755af8544e', 'statement', 4021, 4222);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (5, 8, 4, 'copyright 3dfx interactive, inc. 1999, all rights reserved this 
-', '0xd5b4932ee22d9d53', 'statement', 5063, 5128);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (6, 8, 4, 'written permission of 3dfx interactive, 
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (1, 8, 3, 'copyright (c) 1993-2009, all rights reserved. since doc software is open-source, freely available software, you are free to use, modify, copy, and distribute--perpetually and irrevocably--the doc softw', '0xc94dcc0ecf38ec1b', 'statement', 342, 543, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (2, 8, 3, 'modified versions of this software. you must, however, include this copyright statement along with any code built using doc software that you release. no copyright statement needs to be provided if you', '0x3a910990f114f12f', 'statement', 632, 833, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (3, 8, 3, 'maintained by the doc group at the institute for software integrated systems (isis) and the center for distributed object computing of washington university, st. louis for the development of open-sourc', '0x39f39190219b296f', 'statement', 1563, 1764, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (4, 8, 3, 'written permission from washington university, uc irvine, or vanderbilt university. this license grants no permission to call products or services derived from this source ace(tm), tao(tm), ciao(tm), d', '0xd9cce4755af8544e', 'statement', 4021, 4222, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (5, 8, 4, 'copyright 3dfx interactive, inc. 1999, all rights reserved this 
+', '0xd5b4932ee22d9d53', 'statement', 5063, 5128, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (6, 8, 4, 'written permission of 3dfx interactive, 
 inc. see the 3dfx glide general public license for a full text of the 
-', '0x6efc9d9755ede08', 'statement', 5290, 5403);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (7, 8, 4, 'copyright laws of 
+', '0x6efc9d9755ede08', 'statement', 5290, 5403, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (7, 8, 4, 'copyright laws of 
 the united states. 
 
 copyright 3dfx interactive, inc. 1999, all rights reserved" 
-', '0x68a5892b51a5958b', 'statement', 6854, 6958);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (8, 8, 4, 'info@3dfx.com', '0x7214ac670cc0668', 'email', 5467, 5480);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (9, 8, 4, 'info@3dfx.com', '0x7214ac670cc0668', 'email', 6322, 6335);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (10, 8, 5, 'copyright (c) 2002 by author 
+', '0x68a5892b51a5958b', 'statement', 6854, 6958, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (8, 8, 4, 'info@3dfx.com', '0x7214ac670cc0668', 'email', 5467, 5480, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (9, 8, 4, 'info@3dfx.com', '0x7214ac670cc0668', 'email', 6322, 6335, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (10, 8, 5, 'copyright (c) 2002 by author 
 professional identification * url 
-', '0xcd38e0e5aeb1930f', 'statement', 31, 97);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (11, 8, 5, '(c) url ("url"). 
+', '0xcd38e0e5aeb1930f', 'statement', 31, 97, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (11, 8, 5, '(c) url ("url"). 
 3. neither the name nor any trademark of the author may be used to 
-', '0x2e0e72503af8034', 'statement', 1252, 1339);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (12, 8, 6, 'copyright (c) 2002 lawrence e. rosen. all rights
+', '0x2e0e72503af8034', 'statement', 1252, 1339, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (12, 8, 6, 'copyright (c) 2002 lawrence e. rosen. all rights
 reserved. permission is hereby granted to copy and distribute this
-', '0x746a69946ff2da41', 'statement', 4499, 4616);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (13, 8, 6, 'copyright grant to the software. the
+', '0x746a69946ff2da41', 'statement', 4499, 4616, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (13, 8, 6, 'copyright grant to the software. the
     bsd and apache licenses are vague and incomplete in that respect.
-', '0xd4a26567ae3c6dde', 'statement', 5431, 5539);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (14, 8, 6, 'copyright to the license will control changes. the apache
-', '0x5c8f0370f2ab5d52', 'statement', 6363, 6421);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (15, 8, 8, 'written permission.
+', '0xd4a26567ae3c6dde', 'statement', 5431, 5539, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (14, 8, 6, 'copyright to the license will control changes. the apache
+', '0x5c8f0370f2ab5d52', 'statement', 6363, 6421, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (15, 8, 8, 'written permission.
 
-you agree to indemnify, hold harmless and defend adobe systems incorporated from and against any loss, damage, claims or lawsuits, including attorney''''s fees that arise or result ', '0x32c91329da4f38ae', 'statement', 100, 201);
-INSERT INTO copyright (ct_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte) VALUES (16, 8, 9, 'copyright (c) 2048', '0x5c8f0370f2ab5d53', 'statement', 0, 18);
+you agree to indemnify, hold harmless and defend adobe systems incorporated from and against any loss, damage, claims or lawsuits, including attorney''''s fees that arise or result ', '0x32c91329da4f38ae', 'statement', 100, 201, 'true');
+INSERT INTO copyright (copyright_pk, agent_fk, pfile_fk, content, hash, type, copy_startbyte, copy_endbyte, is_enabled) VALUES (16, 8, 9, 'copyright (c) 2048', '0x5c8f0370f2ab5d53', 'statement', 0, 18, 'true');
 INSERT INTO copyright_ars (ars_pk, agent_fk, upload_fk, ars_success, ars_status, ars_starttime, ars_endtime) VALUES (5, 8, 1, true, NULL, '2014-08-07 09:57:20.634464+00', '2014-08-07 09:57:20.642878+00');
 INSERT INTO copyright_ars (ars_pk, agent_fk, upload_fk, ars_success, ars_status, ars_starttime, ars_endtime) VALUES (11, 8, 2, true, NULL, '2014-08-07 09:57:27.86361+00', '2014-08-07 09:57:27.869927+00');
 INSERT INTO folder (folder_pk, folder_name, folder_desc, folder_perm) VALUES (1, 'Software Repository', 'Top Folder', NULL);
 INSERT INTO foldercontents (foldercontents_pk, parent_fk, foldercontents_mode, child_id) VALUES (1, 1, 0, 0);
 INSERT INTO foldercontents (foldercontents_pk, parent_fk, foldercontents_mode, child_id) VALUES (2, 1, 2, 1);
 INSERT INTO foldercontents (foldercontents_pk, parent_fk, foldercontents_mode, child_id) VALUES (3, 1, 2, 2);
+INSERT INTO foldercontents (foldercontents_pk, parent_fk, foldercontents_mode, child_id) VALUES (44, 1, 2, 2);
 INSERT INTO groups (group_pk, group_name) VALUES (1, 'Default User');
 INSERT INTO groups (group_pk, group_name) VALUES (2, 'fossy');
 INSERT INTO users (user_pk, user_name, root_folder_fk, user_desc, user_seed, user_pass, user_perm, user_email, email_notify, user_agent_list, default_bucketpool_fk, ui_preference, new_upload_group_fk, new_upload_perm) VALUES (1, 'Default User', 1, 'Default User when nobody is logged in', 'Seed', 'Pass', 0, NULL, 'y', NULL, NULL, 'simple', NULL, NULL);
@@ -680,6 +691,18 @@ INSERT INTO license_file (fl_pk, rf_fk, agent_fk, rf_match_pct, rf_timestamp, pf
 INSERT INTO license_file (fl_pk, rf_fk, agent_fk, rf_match_pct, rf_timestamp, pfile_fk, server_fk, fl_ref_start_byte, fl_ref_end_byte, fl_start_byte, fl_end_byte) VALUES (12, 559, 6, NULL, '2014-08-07 09:57:21.714958+00', 7, 1, NULL, NULL, NULL, NULL);
 INSERT INTO license_file (fl_pk, rf_fk, agent_fk, rf_match_pct, rf_timestamp, pfile_fk, server_fk, fl_ref_start_byte, fl_ref_end_byte, fl_start_byte, fl_end_byte) VALUES (13, 498, 6, NULL, '2014-08-07 09:57:21.715495+00', 7, 1, NULL, NULL, NULL, NULL);
 INSERT INTO license_file (fl_pk, rf_fk, agent_fk, rf_match_pct, rf_timestamp, pfile_fk, server_fk, fl_ref_start_byte, fl_ref_end_byte, fl_start_byte, fl_end_byte) VALUES (14, 560, 6, NULL, '2014-08-07 09:57:21.775579+00', 8, 1, NULL, NULL, NULL, NULL);
+INSERT INTO license_ref VALUES (1, 'GPL-2.0-only', 'GPL 2.0 only', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, false, NULL, 3, NULL, NULL, false, 1);
+INSERT INTO license_ref VALUES (2, 'LGPL-2.1-or-later', 'LGPL 2.1 or later', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, false, NULL, 3, NULL, NULL, false, 1);
+INSERT INTO license_ref VALUES (3, 'GPL-2.0-or-later', 'GPL 2.0 or later', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, false, NULL, 3, NULL, NULL, false, 1);
+INSERT INTO license_ref VALUES (4, 'MIT', 'MIT', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, false, NULL, 3, NULL, NULL, false, 1);
+INSERT INTO license_ref VALUES (6, 'Classpath-exception-2.0', 'Classpath exception 2.0', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, false, NULL, 3, NULL, NULL, false, 1)
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (2, 'Test comment #1', 'This will be your first comment!', '2019-05-14 10:12:46.622755+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (3, 'Test comment #2', 'This will be the second comment!', '2019-05-14 10:12:46.624386+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (4, 'Test comment #3', 'This will be the third comment!', '2019-05-14 10:12:46.626194+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (5, 'Test comment #4', 'This will be the fourth comment!', '2019-05-14 10:12:46.627571+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (6, 'Test comment #5', 'This will be the fifth comment!', '2019-05-14 10:12:46.62906+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (7, 'Test comment #6', 'This will be the sixth comment!', '2019-05-14 10:12:46.630884+05:30', 2, true);
+INSERT INTO license_std_comment (lsc_pk, name, comment, updated, user_fk, is_enabled) VALUES (8, 'not-set', 'This comment is not set!', '2019-05-14 10:12:46.632193+05:30', 2, false);
 INSERT INTO mimetype_ars (ars_pk, agent_fk, upload_fk, ars_success, ars_status, ars_starttime, ars_endtime) VALUES (3, 1, 1, true, NULL, '2014-08-07 09:57:20.475587+00', '2014-08-07 09:57:20.593476+00');
 INSERT INTO mimetype_ars (ars_pk, agent_fk, upload_fk, ars_success, ars_status, ars_starttime, ars_endtime) VALUES (8, 1, 2, true, NULL, '2014-08-07 09:57:27.733091+00', '2014-08-07 09:57:27.77946+00');
 INSERT INTO monk_ars (ars_pk, agent_fk, upload_fk, ars_success, ars_status, ars_starttime, ars_endtime) VALUES (6, 5, 1, true, NULL, '2014-08-07 09:57:20.771017+00', '2014-08-07 09:57:21.017807+00');
@@ -705,7 +728,7 @@ INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (11, 9, 1, 7, 32768, 9, 10, 'Adaptec');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (12, 9, 1, 8, 32768, 11, 12, 'Adobe');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (9, 4, 1, 0, 536888320, 6, 13, '2');
-INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (7, 5, 1, 4, 32768, 15, 16, '3DFX');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (7, 5, 1, 4, 32768, 15, 16, 'Glide');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (6, 5, 1, 3, 32768, 17, 18, 'ACE');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (8, 5, 1, 5, 32768, 19, 20, 'AAL');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (5, 4, 1, 0, 536888320, 14, 21, '1');
@@ -736,3 +759,13 @@ INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (36, 35, 3, 0, 536888320, 5, 22, 'B');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (35, 33, 3, 0, 805323776, 4, 23, 'artifact.dir');
 INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (33, NULL, 3, 9, 536904704, 1, 24, 'C.zip');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (460, NULL, 44, 755, 536904704, 1, 20, 'spdx.tar');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (461, NULL, 44, 0, 805323776, 2, 19, 'artifact.dir');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (462, NULL, 44, 0, 536888320, 3, 18, 'spdx');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (463, NULL, 44, 756, 33188, 4, 5, 'GPL-2.0');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (464, NULL, 44, 757, 33188, 6, 7, 'GPL-2.0+');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (465, NULL, 44, 758, 33188, 8, 9, 'GPL-2.0_AND_LGPL-2.1-or-later_OR_MIT');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (466, NULL, 44, 759, 33188, 10, 11, 'GPL-2.0-only');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (467, NULL, 44, 760, 33188, 12, 13, 'GPL-2.0-or-later');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (468, NULL, 44, 761, 33188, 14, 15, 'GPL-2.0_OR_MIT');
+INSERT INTO uploadtree_a (uploadtree_pk, parent, upload_fk, pfile_fk, ufile_mode, lft, rgt, ufile_name) VALUES (468, NULL, 44, 762, 33188, 16, 17, 'GPL-2.0_WITH_Classpath-exception-2.0');

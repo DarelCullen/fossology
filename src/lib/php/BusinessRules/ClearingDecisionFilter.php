@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2017, Siemens AG
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -22,31 +22,38 @@ use Fossology\Lib\Data\ClearingDecision;
 use Fossology\Lib\Data\DecisionScopes;
 use Fossology\Lib\Data\DecisionTypes;
 
+/**
+ * @class ClearingDecisionFilter
+ * @brief Various utility functions to filter ClearingDecision
+ */
 class ClearingDecisionFilter
 {
+  /** @var string KEYREPO
+   * Key for repo level decisions */
   const KEYREPO = "all";
 
   /**
-   * @param ClearingDecision[] $clearingDecisions
+   * @brief Get the clearing decisions as a map of
+   * `[<pfile-id>] => [<uploadtree-id>] => decision`
+   *
+   * Irrelevant decisions are removed from the map.
+   * @param ClearingDecision[] $clearingDecisions Clearing decisions to be filtered.
    * @return ClearingDecision[][]
    */
   public function filterCurrentClearingDecisions($clearingDecisions)
   {
-    /* @var $clearingDecisionsByItemId ClearingDecision[][] */
+    /* @var ClearingDecision[][] $clearingDecisionsByItemId */
     $clearingDecisionsMapped = array();
 
-    foreach ($clearingDecisions as $clearingDecision)
-    {
-      if ($clearingDecision->getType() == DecisionTypes::IRRELEVANT)
-      {
+    foreach ($clearingDecisions as $clearingDecision) {
+      if ($clearingDecision->getType() == DecisionTypes::IRRELEVANT) {
         continue;
       }
       $itemId = $clearingDecision->getUploadTreeId();
       $fileId = $clearingDecision->getPfileId();
       $scope = $clearingDecision->getScope();
 
-      switch ($scope)
-      {
+      switch ($scope) {
         case DecisionScopes::ITEM:
           $clearingDecisionsMapped[$fileId][$itemId] = $clearingDecision;
           break;
@@ -63,16 +70,46 @@ class ClearingDecisionFilter
     return $clearingDecisionsMapped;
   }
 
+
   /**
-   * @param ClearingDecision[] $clearingDecisions
+   * @brief Get clearing decision as map of `<item-id> => <license-shortnames>`
+   *
+   * Irrelevant decisions and removed licenses are removed from the map.
+   * @param ClearingDecision[] $clearingDecisions Clearing decisions to be filtered.
+   * @return ClearingDecision[]
+   */
+  public function filterCurrentClearingDecisionsForLicenseList($clearingDecisions)
+  {
+    $clearingDecisionsForLicList = array();
+
+    foreach ($clearingDecisions as $clearingDecision) {
+
+      if ($clearingDecision->getType() == DecisionTypes::IRRELEVANT) {
+        continue;
+      }
+
+      foreach ($clearingDecision->getClearingLicenses() as $clearingLicense) {
+        if ($clearingLicense->isRemoved()) {
+          continue;
+        }
+        $itemId = $clearingDecision->getUploadTreeId();
+        $clearingDecisionsForLicList[$itemId][] = $clearingLicense->getShortName();
+      }
+    }
+    return $clearingDecisionsForLicList;
+  }
+
+
+  /**
+   * @brief Map clearing decisions by upload tree item id
+   * @param ClearingDecision[] $clearingDecisions Clearing decisions to be filtered.
    * @return ClearingDecision[]
    */
   public function filterCurrentReusableClearingDecisions($clearingDecisions)
   {
     /** @var ClearingDecision[] $clearingDecisionsByItemId */
     $clearingDecisionsByItemId = array();
-    foreach ($clearingDecisions as $clearingDecision)
-    {
+    foreach ($clearingDecisions as $clearingDecision) {
       $itemId = $clearingDecision->getUploadTreeId();
       $clearingDecisionsByItemId[$itemId] = $clearingDecision;
     }
@@ -80,15 +117,15 @@ class ClearingDecisionFilter
   }
 
   /**
-   * @return ClearingDecision|false
+   * @brief For a given decision map, get the decision of the given item or
+   * pfile id
+   * @return ClearingDecision|false ClearingDecision if found, false otherwise.
    */
   public function getDecisionOf($decisionMap, $itemId, $pfileId)
   {
-    if (array_key_exists($pfileId, $decisionMap))
-    {
+    if (array_key_exists($pfileId, $decisionMap)) {
       $pfileMap = $decisionMap[$pfileId];
-      if (array_key_exists($itemId, $pfileMap))
-      {
+      if (array_key_exists($itemId, $pfileMap)) {
         return $pfileMap[$itemId];
       }
       if (array_key_exists(self::KEYREPO, $pfileMap)) {

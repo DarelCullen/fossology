@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2018, Siemens AG
 Author: Johannes Najjar
 
 This program is free software; you can redistribute it and/or
@@ -21,9 +21,8 @@ namespace Fossology\Lib\Data;
 
 use Fossology\Lib\Data\Clearing\ClearingEvent;
 use Fossology\Lib\Exception;
-use Fossology\Lib\Util\Object;
 
-class ClearingDecisionBuilder extends Object
+class ClearingDecisionBuilder
 {
   /** @var bool */
   private $sameFolder;
@@ -45,6 +44,8 @@ class ClearingDecisionBuilder extends Object
   private $comment;
   /** @var string */
   private $reportinfo;
+  /** @var string */
+  private $acknowledgement;
   /** @var int */
   private $scope;
   /** @var int */
@@ -93,7 +94,7 @@ class ClearingDecisionBuilder extends Object
     $this->clearingEvents = $events;
     return $this;
   }
- 
+
   /**
    * @param int $pfileId
    * @return ClearingDecisionBuilder
@@ -187,6 +188,7 @@ class ClearingDecisionBuilder extends Object
     $this->type = $clearingDecision->getType();
     $this->comment = $clearingDecision->getComment();
     $this->reportinfo = $clearingDecision->getReportinfo();
+    $this->acknowledgement = $clearingDecision->getAcknowledgement();
     $this->scope = $clearingDecision->getScope();
     $this->timeStamp = $clearingDecision->getTimeStamp();
   }
@@ -197,15 +199,13 @@ class ClearingDecisionBuilder extends Object
    */
   public function build()
   {
-    if ($this->type === null)
-    {
+    if ($this->type === null) {
       throw new Exception("decision type should be set");
     }
 
     return new ClearingDecision($this->sameFolder, $this->clearingId,
         $this->uploadTreeId, $this->pfileId, $this->userName, $this->userId, $this->type, $this->scope,
-        $this->timeStamp, $this->clearingEvents, $this->reportinfo, $this->comment);
+        $this->timeStamp, $this->clearingEvents, $this->reportinfo, $this->comment, $this->acknowledgement);
   }
-
 }
 

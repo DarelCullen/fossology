@@ -29,10 +29,12 @@ function getCookie(cookieName) {
   var allCookies = document.cookie.split(';');
   for (var i = 0; i < allCookies.length; i++) {
     var theCookie = allCookies[i];
-    while (theCookie.charAt(0) == ' ')
+    while (theCookie.charAt(0) == ' ') {
       theCookie = theCookie.substring(1);
-    if (theCookie.indexOf(name) != -1)
+    }
+    if (theCookie.indexOf(name) != -1) {
       return theCookie.substring(name.length, theCookie.length);
+    }
   }
   return "";
 }
@@ -69,6 +71,18 @@ function failed(jqXHR, textStatus, error) {
 }
 
 function rmDefaultText(caller, dflt) {
-  if ($(caller).val() == dflt)
+  if ($(caller).val() == dflt) {
     $(caller).val('');
+  }
+}
+
+function sortList(selector)
+{
+    var options = $(selector);
+    var arr = options.map(function(_, o) { return { t: $(o).text(), v: o.value }; }).get();
+    arr.sort(function(o1, o2) { return o1.t.toLowerCase() > o2.t.toLowerCase() ? 1 : o1.t.toLowerCase() < o2.t.toLowerCase() ? -1 : 0; });
+    options.each(function(i, o) {
+        o.value = arr[i].v;
+        $(o).text(arr[i].t);
+    });
 }

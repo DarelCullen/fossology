@@ -1,6 +1,7 @@
 <?php
 /***********************************************************
  Copyright (C) 2008-2012 Hewlett-Packard Development Company, L.P.
+ Copyright (C) 2018 Siemens AG
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -17,14 +18,14 @@
  ***********************************************************/
 
 /**
- * \file common-agent.php
+ * \file
  * \brief These are common functions used by analysis agents.
  *
  * Analysis Agents should register themselves in the menu structure under the
- * top-level "Agents" menu. \n
+ * top-level "Agents" menu.
  *
  * Every analysis agent should have a function called "AgentAdd()" that takes
- * an Upload_pk and an optional array of dependent agents ids. \n
+ * an Upload_pk and an optional array of dependent agents ids.
  *
  * This function should return: \n
  * 0 = not scheduled \n
@@ -35,17 +36,19 @@
 /**
  *
  * \brief Generate a checkbox list of available agents.
-
+ *
  * Only agents that are not already scheduled are added. If
  * $upload_pk == -1, then list all.  User agent preferences will be
  * checked as long as the agent is not already scheduled.
  *
- * \param $upload_pk - upload id
- * \param $SkipAgents - Array of agent names to omit from the checkboxes
+ * \param int $upload_pk    Upload id
+ * \param array $SkipAgents Array of agent names to omit from the checkboxes
+ * \param string $specified_username If not empty, use the specified username
+ * instead of username stored in session.
  *
  * \return string containing formatted checkbox list HTML
  */
-function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username = "") 
+function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username = "")
 {
 
   global $Plugins;
@@ -57,25 +60,28 @@ function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username =
   if (!empty($AgentList)) {
     // get user agent preferences
     $userName = $_SESSION['User'];
-    if (!empty($specified_username)) $userName = $specified_username;
+    if (!empty($specified_username)) {
+      $userName = $specified_username;
+    }
     $sql = "SELECT user_name, user_agent_list, default_bucketpool_fk FROM users WHERE
 				    user_name='$userName';";
     $result = pg_query($PG_CONN, $sql);
-    DBCheckResult($result, $sql, __FILE__, __LINE__);    
+    DBCheckResult($result, $sql, __FILE__, __LINE__);
     $uList = pg_fetch_all($result);
     pg_free_result($result);
     // Ulist should never be empty, if it is, something really wrong,
     // like the user_agent_list column is missing.
-    if(empty($uList))
-    {
+    if (empty($uList)) {
       $text = _("Fatal! Query Failed getting user_agent_list for user");
       return("<h3 style='color:red'>$text $userName</h3>");
     }
     $list = explode(',',$uList[0]['user_agent_list']);
     $default_bucketpool_fk = $uList[0]['default_bucketpool_fk'];
-    if (empty($default_bucketpool_fk)) $SkipAgents[] = "agent_bucket";
+    if (empty($default_bucketpool_fk)) {
+      $SkipAgents[] = "agent_bucket";
+    }
 
-    foreach($AgentList as $AgentItem) {
+    foreach ($AgentList as $AgentItem) {
       $Agent = &$Plugins[plugin_find_id($AgentItem->URI)];
       if (empty($Agent)) {
         continue;
@@ -83,20 +89,19 @@ function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username =
 
       // ignore agents to skip from list
       $FoundSkip = false;
-      foreach($SkipAgents as $SkipAgent)
-      {
-        if ($Agent->Name == $SkipAgent)  
-        {
+      foreach ($SkipAgents as $SkipAgent) {
+        if ($Agent->Name == $SkipAgent) {
           $FoundSkip = true;
           break;
         }
       }
-      if ($FoundSkip) continue;
- 
+      if ($FoundSkip) {
+        continue;
+      }
+
       if ($upload_pk != -1) {
         $rc = $Agent->AgentHasResults($upload_pk);
-      }
-      else {
+      } else {
         $rc = 0;
       }
       if ($rc != 1) {
@@ -105,12 +110,9 @@ function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username =
 
         // display user agent preferences
 
-        if(in_array($Name, $list))
-        {
+        if (in_array($Name, $list)) {
           $Selected = " checked ";
-        }
-        else
-        {
+        } else {
           $Selected = "";
         }
         $V .= "<input type='checkbox' name='Check_$Name' value='1' $Selected />$Desc<br />\n";
@@ -122,10 +124,10 @@ function AgentCheckBoxMake($upload_pk,$SkipAgents=array(), $specified_username =
 
 /**
  * \brief  Assume someone called AgentCheckBoxMake() and submitted the HTML form.
- *         Run AgentAdd() for each of the checked agents. 
+ *         Run AgentAdd() for each of the checked agents.
  *
- * \param $job_pk
- * \param $upload_pk
+ * \param int $job_pk    Job ID
+ * \param int $upload_pk Upload ID
  */
 function AgentCheckBoxDo($job_pk, $upload_pk)
 {
@@ -135,19 +137,18 @@ function AgentCheckBoxDo($job_pk, $upload_pk)
 
 
 /**
- * \brief  schedule all given agents
+ * \brief Schedule all given agents
  *
  * \param int $jobId
  * \param int $uploadId
- * \param Plugin[] $agents array of agent plugin, mapped by name as in listAgents()
+ * \param array $agents Array of agent plugin, mapped by name as in listAgents()
  *
  * \return null|string null on success or error message [sic]
  */
 function AgentSchedule($jobId, $uploadId, $agents)
 {
   $errorMsg = "";
-  foreach($agents as &$agent)
-  {
+  foreach ($agents as &$agent) {
     $rv = $agent->AgentAdd($jobId, $uploadId, $errorMsg, array());
     if ($rv == -1) {
       return $errorMsg;
@@ -157,14 +158,14 @@ function AgentSchedule($jobId, $uploadId, $agents)
 }
 
 /**
- * \brief find the jobs in the job and jobqueue table to be dependent on
+ * \brief Find the jobs in the job and jobqueue table to be dependent on
  *
- * \param int $UploadPk the upload PK
- * \param array $list an optional array of jobs to use instead of all jobs
+ * \param int $UploadPk The upload PK
+ * \param array $list An optional array of jobs to use instead of all jobs
  *        associated with the upload
- * \return array of dependencies
+ * \return Array of dependencies
  */
-function FindDependent($UploadPk, $list=NULL) 
+function FindDependent($UploadPk, $list=NULL)
 {
   /*
    * Find the jobs that fo_notify should depend on. fo_notify is
@@ -192,29 +193,22 @@ function FindDependent($UploadPk, $list=NULL)
   pg_free_result($result);
 
   $jobList = array();
-  foreach($Jobs as $Row) {
-    if($Row['job_name'] == 'Copyright Analysis') {
+  foreach ($Jobs as $Row) {
+    if ($Row['job_name'] == 'Copyright Analysis') {
       $jobList[] = $Row['job_pk'];
-    }
-    elseif($Row['job_name'] == 'Bucket Analysis')
-    {
+    } elseif ($Row['job_name'] == 'Bucket Analysis') {
       $jobList[] = $Row['job_pk'];
-    }
-    elseif($Row['job_name'] == 'Package Agents')
-    {
+    } elseif ($Row['job_name'] == 'Package Agents') {
       $jobList[] = $Row['job_pk'];
-    }
-    elseif($Row['job_name'] == 'Nomos License Analysis')
-    {
+    } elseif ($Row['job_name'] == 'Nomos License Analysis') {
       $jobList[] = $Row['job_pk'];
     }
   }
 
   // get the jq_pk's for each job, retrun the list of jq_pk's
-  foreach($jobList as $job)
-  {
+  foreach ($jobList as $job) {
     $sql = "SELECT jq_pk, jq_job_fk FROM jobqueue WHERE jq_job_fk = $job " .
-					 " order by jq_pk desc;";
+                     " order by jq_pk desc;";
     $result = pg_query($PG_CONN, $sql);
     DBCheckResult($result, $sql, __FILE__, __LINE__);
     $Q = pg_fetch_all($result);
@@ -225,12 +219,13 @@ function FindDependent($UploadPk, $list=NULL)
 } // FindDependent
 
 /**
- * \brief, get the latest enabled agent_pk for a given agent,
- *  This needs to match the C version of same function in libfossagent
- *  This will create an agent record if one doesn't already exist.
+ * \brief Get the latest enabled agent_pk for a given agent.
  *
- * \param string $agentName the name of the agent e.g. nomos
- * \param string $agentDesc the agent_desc colunm
+ * This needs to match the C version of same function in libfossagent
+ * This will create an agent record if one doesn't already exist.
+ *
+ * \param string $agentName The name of the agent e.g. nomos
+ * \param string $agentDesc The agent_desc colunm
  *
  * \todo When creating an agent record, set the agent_rev.
  *
@@ -241,12 +236,12 @@ function GetAgentKey($agentName, $agentDesc)
   global $PG_CONN;
 
   /* get the exact agent rec requested */
-  $sqlselect = "SELECT agent_pk FROM agent WHERE agent_name ='$agentName' and agent_enabled='true' order by agent_ts desc limit 1";
+  $sqlselect = "SELECT agent_pk FROM agent WHERE agent_name ='$agentName' "
+             . "and agent_enabled='true' order by agent_ts desc limit 1";
   $result = pg_query($PG_CONN, $sqlselect);
   DBCheckResult($result, $sqlselect, __FILE__, __LINE__);
 
-  if (pg_num_rows($result) == 0)
-  {
+  if (pg_num_rows($result) == 0) {
     /* no match, so add an agent rec */
     $sql = "INSERT INTO agent (agent_name,agent_desc,agent_enabled) VALUES ('$agentName',E'$agentDesc',1)";
     $result = pg_query($PG_CONN, $sqlselect);
@@ -265,8 +260,8 @@ function GetAgentKey($agentName, $agentDesc)
 
 
 /**
- * \deprecated  Use AgentesDao->AgentARSList
- * \brief
+ * \deprecated Use AgentesDao->agentARSList
+ *
  *  The purpose of this function is to return an array of
  *  _ars records for an agent so that the latest agent_pk(s)
  *  can be determined.
@@ -275,62 +270,49 @@ function GetAgentKey($agentName, $agentDesc)
  *  The _ars tables have a standard format but the specific agent ars table
  *  may have additional fields.
  *
- * \param string  $TableName - name of the ars table (e.g. nomos_ars)
+ * \param string  $TableName Name of the ars table (e.g. nomos_ars)
  * \param int     $upload_pk
- * \param int     $limit - limit number of rows returned.  0=No limit, default=1
- * \param int     $agent_fk - ARS table agent_fk, optional
- * \param string  $ExtraWhere - Optional, added to where clause.
+ * \param int     $limit Limit number of rows returned.  0=No limit, default=1
+ * \param int     $agent_fk ARS table agent_fk, optional
+ * \param string  $ExtraWhere Optional, added to where clause.
  *                   eg: "and bucketpool_fk=2"
  *
- * \return assoc array of _ars records.
+ * \return Assoc array of _ars records.
  *         or FALSE on error, or no rows
  */
 function AgentARSList($TableName, $upload_pk, $limit=1, $agent_fk=0, $ExtraWhere="")
 {
   global $PG_CONN;
-
-  if (!DB_TableExists($TableName)) return false;
-
-  $LimitClause = "";
-  if ($limit > 0) $LimitClause = " limit $limit";
-  if ($agent_fk)
-  $agentCond = " and agent_fk='$agent_fk' ";
-  else
-  $agentCond = "";
-
-  $sql = "SELECT * FROM $TableName, agent
-           WHERE agent_pk=agent_fk and ars_success=true and upload_fk='$upload_pk' and agent_enabled=true
-           $agentCond $ExtraWhere
-           order by agent_ts desc $LimitClause";
-  $result = pg_query($PG_CONN, $sql);
-  DBCheckResult($result, $sql, __FILE__, __LINE__);
-  $resultArray =  pg_fetch_all($result);
-  pg_free_result($result);
-  return $resultArray;
+  global $container;
+  /** @var AgentDao $agentDao */
+  $agentDao = $container->get('dao.agent');
+  return $agentDao->agentARSList($TableName, $upload_pk, $limit, $agent_fk, $ExtraWhere);
 }
 
 
 /**
  * \brief Given an upload_pk, find the latest enabled agent_pk with results.
  *
- * \param $upload_pk - upload id
- * \param $arsTableName - name of ars table to check for the requested agent
+ * \param int    $upload_pk Upload id
+ * \param string $arsTableName Name of ars table to check for the requested agent
+ * \param bool   $arsSuccess Need only success results?
  *
- * \returns nomos agent_pk or 0 if none
+ * \returns Nomos agent_pk or 0 if none
  */
-function LatestAgentpk($upload_pk, $arsTableName)
+function LatestAgentpk($upload_pk, $arsTableName, $arsSuccess = false)
 {
-  $AgentRec = AgentARSList($arsTableName, $upload_pk, 1);
-  if ($AgentRec === false)
+  $AgentRec = AgentARSList($arsTableName, $upload_pk, 1, 0, $arsSuccess);
+
+  if (empty($AgentRec)) {
     $Agent_pk = 0;
-  else
+  } else {
     $Agent_pk = intval($AgentRec[0]['agent_fk']);
+  }
   return $Agent_pk;
 }
 
 
 /**
- * \brief
  *  The purpose of this function is to return a pulldown select list for users
  *  to be able to select the dataset results they want to see.
  *
@@ -338,32 +320,26 @@ function LatestAgentpk($upload_pk, $arsTableName)
  *  The _ars tables have a standard format with optional agent_fk's named
  *  agent_fk2, agent_fk3, ...
  *
- * \param string  $TableName - name of the ars table (e.g. nomos_ars)
+ * \param string  $TableName Name of the ars table (e.g. nomos_ars)
  * \param int     $upload_pk
- * \param string  $SLName    - select list element name
- * \param string  &$Agent_pk  - return which agent is selected
- * \param string  $extra     - Extra info for the select element, e.g. "onclick=..."
+ * \param string  $SLName    Select list element name
+ * \param string  &$agent_pk Return which agent is selected
+ * \param string  $extra     Extra info for the select element, e.g. "onclick=..."
  *
- * \return agent select list, when only one data, return null
- * @param $TableName
- * @param $upload_pk
- * @param $SLName
- * @param $agent_pk
- * @param string $extra
- * @return string
+ * \return Agent select list, when only one data, return null
  */
 function AgentSelect($TableName, $upload_pk, $SLName, &$agent_pk, $extra = "")
 {
   global $PG_CONN;
   /* get the agent recs */
   $TableName .= '_ars';
-  $sql = "select agent_pk, agent_name, agent_rev from agent, $TableName where agent.agent_pk = $TableName.agent_fk and upload_fk = $upload_pk order by agent_rev DESC";
+  $sql = "select agent_pk, agent_name, agent_rev from agent, $TableName where "
+       . "agent.agent_pk = $TableName.agent_fk and upload_fk = $upload_pk order by agent_rev DESC";
   $result = pg_query($PG_CONN, $sql);
   DBCheckResult($result, $sql, __FILE__, __LINE__);
 
   $NumRows = pg_num_rows($result);
-  if ($NumRows == 1) // only one result
-  {
+  if ($NumRows == 1) { // only one result
     pg_free_result($result);
     return;  /* only one result */
   }
@@ -372,12 +348,10 @@ function AgentSelect($TableName, $upload_pk, $SLName, &$agent_pk, $extra = "")
   while ($row = pg_fetch_assoc($result)) {
     $select .= "<option value='$row[agent_pk]'";
 
-    if (empty($agent_pk))
-    {
+    if (empty($agent_pk)) {
       $select .= " SELECTED ";
       $agent_pk = $row["agent_pk"];
-    } else if ($agent_pk == $row['agent_pk'])
-    {
+    } else if ($agent_pk == $row['agent_pk']) {
       $select .= " SELECTED ";
     }
 
@@ -390,10 +364,10 @@ function AgentSelect($TableName, $upload_pk, $SLName, &$agent_pk, $extra = "")
 
 
 /**
- * \brief read the UI form and format the user selected agents into a
+ * \brief Read the UI form and format the user selected agents into a
  * comma separated list
  *
- * \return string $agentsChecked list of checked agents
+ * \return String $agentsChecked list of checked agents
  */
 function userAgents()
 {
@@ -410,10 +384,8 @@ function checkedAgents()
 {
   $agentsChecked = array();
   $agentList = listAgents();
-  foreach($agentList as $agentName => &$agentPlugin)
-  {
-    if (GetParm("Check_" . $agentName, PARM_INTEGER) == 1)
-    {
+  foreach ($agentList as $agentName => &$agentPlugin) {
+    if (GetParm("Check_" . $agentName, PARM_INTEGER) == 1) {
       $agentsChecked[$agentName] = &$agentPlugin;
     }
   }
@@ -423,7 +395,7 @@ function checkedAgents()
 }
 
 /**
- * \brief search in available plugins and return all agents
+ * \brief Search in available plugins and return all agents
  *
  * \return Plugin[] list of checked agent plugins, mapped by name
  */
@@ -433,7 +405,7 @@ function listAgents()
 
   $agentList = menu_find("Agents",$Depth);
   if (!empty($agentList)) {
-    foreach($agentList as $agentItem) {
+    foreach ($agentList as $agentItem) {
       /*
        The URI below contains the agent name e.g agent_license, this is
        not be confused with the Name attribute in the class, for example,
@@ -452,12 +424,12 @@ function listAgents()
 /**
  * \brief Check the ARS table to see if an agent has successfully scanned an upload.
  *
- * \param $upload_pk - the upload will be checked
- * \param $AgentName - Agent name, eg "nomos"
- * \param $AgentDesc - Agent description, eg "license scanner"
- * \param $AgentARSTableName - Agent ars table name, eg "nomos_ars"
+ * \param int    $upload_pk The upload will be checked
+ * \param string $AgentName Agent name, eg "nomos"
+ * \param string $AgentDesc Agent description, eg "license scanner"
+ * \param string $AgentARSTableName Agent ars table name, eg "nomos_ars"
  *
- * \returns:
+ * \returns
  * - 0 = no
  * - 1 = yes, from latest agent version
  * - 2 = yes, from older agent version (does not apply to adj2nest)
@@ -468,11 +440,15 @@ function CheckARS($upload_pk, $AgentName, $AgentDesc, $AgentARSTableName)
   $Latest_agent_pk = GetAgentKey($AgentName, $AgentDesc);
 
   /* get last agent pk with successful results */
-  $Last_successful_agent_pk = LatestAgentpk($upload_pk, $AgentARSTableName);
+  $Last_successful_agent_pk = LatestAgentpk($upload_pk, $AgentARSTableName, true);
 
-  if (!empty($Latest_agent_pk) and !empty($Last_successful_agent_pk) and ($Latest_agent_pk == $Last_successful_agent_pk)) return 1;
-
-  if (!empty($Latest_agent_pk) and !empty($Last_successful_agent_pk) ) return 2;
+  if (! empty($Latest_agent_pk) && ! empty($Last_successful_agent_pk)) {
+    if ($Latest_agent_pk == $Last_successful_agent_pk) {
+      return 1;
+    } else {
+      return 2;
+    }
+  }
 
   return 0;
 } // CheckARS()

@@ -21,31 +21,57 @@ namespace Fossology\Lib\Application;
 use Fossology\Lib\BusinessRules\LicenseMap;
 use Fossology\Lib\Db\DbManager;
 
-class LicenseCsvExport {
-  /** @var DbManager */
+/**
+ * @file
+ * @brief Helper class to export license list as a CSV from the DB
+ */
+
+/**
+ * @class LicenseCsvExport
+ * @brief Helper class to export license list as a CSV from the DB
+ */
+class LicenseCsvExport
+{
+  /** @var DbManager $dbManager
+   * DB manager in use */
   protected $dbManager;
-  /** @var string */
+  /** @var string $delimiter
+   * Delimiter for CSV */
   protected $delimiter = ',';
-  /** @var string */
+  /** @var string $enclosure
+   * Enclosure for CSV strings */
   protected $enclosure = '"';
 
+  /**
+   * Constructor
+   * @param DbManager $dbManager DB manager to use.
+   */
   public function __construct(DbManager $dbManager)
   {
     $this->dbManager = $dbManager;
   }
-  
+
+  /**
+   * @brief Update the delimiter
+   * @param string $delimiter New delimiter to use.
+   */
   public function setDelimiter($delimiter=',')
   {
     $this->delimiter = substr($delimiter,0,1);
   }
 
+  /**
+   * @brief Update the enclosure
+   * @param string $enclosure New enclosure to use.
+   */
   public function setEnclosure($enclosure='"')
   {
     $this->enclosure = substr($enclosure,0,1);
   }
-  
+
   /**
-   * @param int $rf
+   * @brief Create the CSV from the DB
+   * @param int $rf Set the license ID to get only one license, set 0 to get all
    * @return string csv
    */
   public function createCsv($rf=0)
@@ -58,34 +84,29 @@ class LicenseCsvExport {
               LEFT JOIN license_ref rr ON mr.rf_parent=rr.rf_pk
             WHERE rf.rf_detector_type=$1";
     $param = array($userDetected=1,LicenseMap::CONCLUSION,LicenseMap::REPORT);
-    if ($rf>0)
-    {
+    if ($rf>0) {
       $stmt = __METHOD__.'.rf';
       $param[] = $rf;
       $sql .= ' AND rf.rf_pk=$'.count($param);
       $row = $this->dbManager->getSingleRow($sql,$param,$stmt);
       $vars = $row ? array( $row ) : array();
-    }
-    else
-    {
+    } else {
       $stmt = __METHOD__;
       $this->dbManager->prepare($stmt,$sql);
       $res = $this->dbManager->execute($stmt,$param);
       $vars = $this->dbManager->fetchAll( $res );
       $this->dbManager->freeResult($res);
     }
-    
+
     $out = fopen('php://output', 'w');
     ob_start();
     $head = array('shortname','fullname','text','parent_shortname','report_shortname','url','notes','source','risk');
     fputcsv($out, $head, $this->delimiter, $this->enclosure);
-    foreach($vars as $row)
-    {
+    foreach ($vars as $row) {
       fputcsv($out, $row, $this->delimiter, $this->enclosure);
     }
     $content = ob_get_contents();
     ob_end_clean();
     return $content;
   }
-
-} 
+}

@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2016, Siemens AG
 Author: Andreas Würl
 
 This program is free software; you can redistribute it and/or
@@ -41,7 +41,7 @@ abstract class DefaultPlugin implements Plugin
   const MENU_ORDER = "menuOrder";
   const MENU_TARGET = "menuTarget";
   const TITLE = "title";
-    
+
   /** @var ContainerBuilder */
   protected $container;
   /** @var Twig_Environment */
@@ -76,13 +76,11 @@ abstract class DefaultPlugin implements Plugin
 
   public function __construct($name, $parameters = array())
   {
-    if ($name === null || $name === "")
-    {
+    if ($name === null || $name === "") {
       throw new \InvalidArgumentException("plugin requires a name");
     }
     $this->name = $name;
-    foreach ($parameters as $key => $value)
-    {
+    foreach ($parameters as $key => $value) {
       $this->setParameter($key, $value);
     }
 
@@ -97,8 +95,7 @@ abstract class DefaultPlugin implements Plugin
 
   private function setParameter($key, $value)
   {
-    switch ($key)
-    {
+    switch ($key) {
       case self::TITLE:
         $this->title = $value;
         break;
@@ -223,8 +220,7 @@ abstract class DefaultPlugin implements Plugin
    */
   protected function RegisterMenus()
   {
-    if (isset($this->MenuList) && (!$this->requiresLogin || $this->isLoggedIn()))
-    {
+    if (isset($this->MenuList) && (!$this->requiresLogin || $this->isLoggedIn())) {
       menu_insert("Main::" . $this->MenuList, $this->MenuOrder, $this->name, $this->name);
     }
   }
@@ -293,8 +289,7 @@ abstract class DefaultPlugin implements Plugin
    */
   protected function render($templateName, $vars = null, $headers = null)
   {
-    if ($this->requiresLogin && !$this->isLoggedIn())
-    {
+    if ($this->requiresLogin && !$this->isLoggedIn()) {
       new Response("permission denied", Response::HTTP_FORBIDDEN, array("contentType" => "text/plain"));
     }
 
@@ -318,16 +313,13 @@ abstract class DefaultPlugin implements Plugin
 
   private function checkPrerequisites()
   {
-    if ($this->requiresLogin && !$this->isLoggedIn())
-    {
+    if ($this->requiresLogin && !$this->isLoggedIn()) {
       throw new \Exception("not allowed without login");
     }
 
-    foreach ($this->dependencies as $dependency)
-    {
+    foreach ($this->dependencies as $dependency) {
       $id = plugin_find_id($dependency);
-      if ($id < 0)
-      {
+      if ($id < 0) {
         $this->unInstall();
         throw new \Exception("unsatisfied dependency '$dependency' in module '" . $this->getName() . "'");
       }
@@ -358,14 +350,14 @@ abstract class DefaultPlugin implements Plugin
 
     $vars['metadata'] = $metadata;
 
-    if (!empty($this->title))
-    {
+    if (!empty($this->title)) {
       $vars[self::TITLE] = htmlentities($this->title);
     }
 
-    $styles = "<link rel='stylesheet' href='css/fossology.css'>\n";
-    $styles .= "<link rel='stylesheet' href='css/jquery-ui.css'>\n";
+    $styles = "<link rel='stylesheet' href='css/jquery-ui.css'>\n";
+    $styles .= "<link rel='stylesheet' href='css/select2.min.css'>\n";
     $styles .= "<link rel='stylesheet' href='css/jquery.dataTables.css'>\n";
+    $styles .= "<link rel='stylesheet' href='css/fossology.css'>\n";
     $styles .= "<link rel='icon' type='image/x-icon' href='favicon.ico'>\n";
     $styles .= "<link rel='shortcut icon' type='image/x-icon' href='favicon.ico'>\n";
 
@@ -381,7 +373,8 @@ abstract class DefaultPlugin implements Plugin
           'version' => $SysConf['BUILD']['VERSION'],
           'buildDate' => $SysConf['BUILD']['BUILD_DATE'],
           'commitHash' => $SysConf['BUILD']['COMMIT_HASH'],
-          'commitDate' => $SysConf['BUILD']['COMMIT_DATE']
+          'commitDate' => $SysConf['BUILD']['COMMIT_DATE'],
+          'branchName' => $SysConf['BUILD']['BRANCH']
       );
     }
 
@@ -397,7 +390,7 @@ abstract class DefaultPlugin implements Plugin
   {
     return $this->render("include/base.html.twig",$this->mergeWithDefault(array("content"=>$content)));
   }
-      
+
   /**
    * @param string $name
    * @throws \Exception
@@ -405,11 +398,9 @@ abstract class DefaultPlugin implements Plugin
    */
   public function __get($name)
   {
-    if (method_exists($this, ($method = 'get' . ucwords($name))))
-    {
+    if (method_exists($this, ($method = 'get' . ucwords($name)))) {
       return $this->$method();
-    } else
-    {
+    } else {
       throw new \Exception("property '$name' not found in module " . $this->name);
     }
   }
@@ -418,6 +409,4 @@ abstract class DefaultPlugin implements Plugin
   {
     return getStringRepresentation(get_object_vars($this), get_class($this));
   }
-
-
 }

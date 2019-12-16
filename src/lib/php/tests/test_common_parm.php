@@ -26,7 +26,7 @@ require_once(dirname(__FILE__) . '/../common-parm.php');
 /**
  * \class test_common_parm
  */
-class test_common_parm extends PHPUnit_Framework_TestCase
+class test_common_parm extends \PHPUnit\Framework\TestCase
 {
   /* initialization */
   protected function setUp()
@@ -154,6 +154,7 @@ class test_common_parm extends PHPUnit_Framework_TestCase
   /**
    * \brief clean the env
    */
-  protected function tearDown() {
+  protected function tearDown()
+  {
   }
 }

@@ -1,6 +1,6 @@
 ######################################################################
 # Copyright (C) 2010-2012 Hewlett-Packard Development Company, L.P.
-# Copyright (C) 2015 Siemens AG
+# Copyright (C) 2015, 2018 Siemens AG
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -52,7 +52,8 @@ OBJS = scheduler.o \
        host.o \
        interface.o \
        job.o \
-       logging.o
+       logging.o \
+       emailformatter.o
 
 COVERAGE = $(OBJS:%.o=%_cov.o)
 
@@ -63,7 +64,8 @@ HEAD = agent.h \
        job.h \
        logging.h \
        interface.h \
-       sqlstatements.h
+       sqlstatements.h \
+       emailformatter.h
 
 ##########################
 # executable build rules #
@@ -118,6 +120,9 @@ job.o: %.o: %.c %.h agent.h database.h $(DEPEN)
 logging.o: %.o: %.c $(DEPEN)
 	$(CC) -c $(CFLAGS_LOCAL) $(DEF) $<
 
+emailformatter.o: %.o: %.c agent.h $(DEPEN)
+	$(CC) -c $(CFLAGS_LOCAL) $(DEF) $<
+
 $(COVERAGE): %_cov.o: %.c $(HEAD) $(DEPEN)
 	$(CC) -c $< $(CFLAGS_LOCAL) $(FLAG_COV) $(FODEF) $(DEF) -o $@
 
@@ -128,7 +133,6 @@ $(COVERAGE): %_cov.o: %.c $(HEAD) $(DEPEN)
 install: all install-conf
 	$(INSTALL_PROGRAM) fo_scheduler $(DESTDIR)$(MODDIR)/scheduler/agent/fo_scheduler
 	$(INSTALL_PROGRAM) fo_cli $(DESTDIR)$(MODDIR)/scheduler/agent/fo_cli
-	$(INSTALL_PROGRAM) defconf/$(INITFILE) $(DESTDIR)$(INITDIR)/$(INITFILE)
 	@if test ! -e $(CONFDIR)/mods-enabled/scheduler; then \
 		ln -s $(MODDIR)/scheduler $(CONFDIR)/mods-enabled; \
 	fi

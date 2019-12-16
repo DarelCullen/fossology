@@ -1,6 +1,6 @@
 /***********************************************************
  Copyright (C) 2008 Hewlett-Packard Development Company, L.P.
- Copyright (C) 2015 Siemens AG
+ Copyright (C) 2015-2018 Siemens AG
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
@@ -82,6 +82,7 @@ table
   min-width: 14px;
   padding: 0 7px;
   margin: 0 5px 0 0;
+  cursor: pointer;
   border-radius: 3px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   background: #efefef; /* Old browsers */
@@ -116,8 +117,6 @@ html, body
   border-left: 1px dashed #222233;
 }
 
-
-
 .simpleTable {
   border:1px solid black;
   border-collapse:collapse;
@@ -129,27 +128,6 @@ html, body
 
 .simpleTable .odd  { background-color: #E2E4FF; }
 .simpleTable .even { background-color: white; }
-
-table.dataTable tr.odd.removed td.sorting_1 {
-  background-color: #ef9e9c;
-}
-table.dataTable tr.odd.removed {
-  background-color: #faa6a4;
-}
-table.dataTable tr.even.removed td.sorting_1 {
-  background-color: #ffb9b9;
-}
-table.dataTable tr.even.removed {
-  background-color: #ffc9c9;
-}
-
-table.dataTable tr.odd.match {
-  background-color: #cea15f;
-}
-
-table.dataTable tr.even.match {
-  background-color: #efbe76;
-}
 
 .inactiveClearing
 {
@@ -257,8 +235,8 @@ img.deleted {
 }
 
 .activeEditText textarea{
-  min-width: 30em;
-  min-height: 7em;
+  min-width: 7em;
+  min-height: 5em;
 }
 
 .info-bullet {
@@ -277,16 +255,11 @@ img.deleted {
 
 .ui-button-text .browse-upload-all-off {
   color: black;
+  font-weight: normal;
 }
 .ui-button-text .browse-upload-all-on {
-  color: white;
-}
-
-.ui-state-active .ui-button-text .browse-upload-all-off {
-  color: #cccccc;
-}
-.ui-state-active .ui-button-text .browse-upload-all-on {
   color: black;
+  font-weight: bold;
 }
 
 .decTypeWip {
@@ -298,4 +271,74 @@ tr.classic {
   border:1px solid black;
   text-align:left;
   background:lightyellow;
+}
+
+#toFolder {
+  width: 100%;
+}
+
+#folder_select {
+  width: 25%;
+}
+
+td.dashboard {
+  vertical-align: top;
+  horiz-align: center;
+  padding-right: 10%;
+}
+
+table.infoTable {
+  max-width: 50%;
+}
+
+div.infoTable {
+  height: 100px;
+  overflow-y: scroll;
+}
+
+#databaseTable {
+  width: 100%;
+}
+
+.candidateFileList{
+  height: 200px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.riskLevelBox {
+  height: 25px;
+  width: 25px;
+  padding: 0 4px;
+  font-weight: bold;
+  line-height: 25px;
+  text-align: center;
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.riskLevelBackgroud0 {
+  background: #ffffff;
+}
+
+.riskLevelBackgroud1 {
+  background: #87cfff;
+}
+
+.riskLevelBackgroud2 {
+  background: #00d10d;
+}
+
+.riskLevelBackgroud3 {
+  background: #f2e600;
+}
+
+.riskLevelBackgroud4 {
+  background: #f17d00
+}
+
+.riskLevelBackgroud5 {
+  background: #e95850;
 }

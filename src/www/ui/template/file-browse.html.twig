@@ -16,7 +16,7 @@
             <tr>
               <th></th>
               <th>
-                <select id="scanFilter">
+                <select id="scanFilter" class="ui-render-select2">
                   <option value="0">-- {{'filter for scan results'|trans}} --</option>
                   {% for shortname,row in scannerLicenses %}
                     <option value="{{row.rf_pk}}">{{ shortname }}</option>
@@ -41,6 +41,7 @@
 {% block foot %}
   {{ parent() }}
   <script src="scripts/jquery.dataTables.min.js" type="text/javascript"></script>
+  <script src="scripts/jquery.dataTables.select.js" type="text/javascript"></script>
   <script src="scripts/jquery.plainmodal.min.js" type="text/javascript"></script>
   <script src="scripts/job-queue-poll.js" type="text/javascript"></script>
   <script src="scripts/change-license-common.js" type="text/javascript"></script>

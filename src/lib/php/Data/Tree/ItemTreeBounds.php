@@ -19,9 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Data\Tree;
 
-use Fossology\Lib\Util\Object;
-
-class ItemTreeBounds extends Object
+class ItemTreeBounds
 {
   /**
    * @var string
@@ -111,6 +109,4 @@ class ItemTreeBounds extends Object
     return "ItemTreeBounds([" . $this->left . ", " . $this->right . "] " .
     "upload " . $this->uploadId . "@" . $this->uploadTreeTableName . ")";
   }
-
-
-} 
+}

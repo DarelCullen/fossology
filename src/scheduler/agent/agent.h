@@ -47,6 +47,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SAG_LOCAL      (1 << 3) ///< This agent should only run on localhost
 
 /**
+ * \file
+ * \brief Header file with agent related operations
+ */
+/**
  * Implementation of x macros used for the creation of the agent status enum.
  * This is used so that if a new agent status is needed, it can be added here
  * and all relevant declarations can be changed.
@@ -76,7 +80,7 @@ typedef enum { AGENT_STATUS_TYPES(SELECT_ENUM) } agent_status;
 extern const char* agent_status_strings[];
 
 /**
- * TODO
+ * \todo
  */
 typedef int agent_pk;
 
@@ -94,6 +98,7 @@ typedef struct
     char* version_source;       ///< the machine that reported the version information
     char* version;              ///< the version of the agent that is running on all hosts
     int valid;                  ///< flag indicating if the meta_agent is valid
+    int run_count;              ///< the count of agents in running state
 } meta_agent_t;
 
 /**
@@ -175,5 +180,8 @@ void kill_agents(scheduler_t* scheduler);
 
 int  is_meta_special(meta_agent_t* ma, int special_type);
 int  is_agent_special(agent_t* agent, int special_type);
+
+void meta_agent_increase_count(meta_agent_t*);
+void meta_agent_decrease_count(meta_agent_t*);
 
 #endif /* AGENT_H_INCLUDE */

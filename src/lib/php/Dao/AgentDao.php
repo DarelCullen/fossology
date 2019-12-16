@@ -22,14 +22,13 @@ namespace Fossology\Lib\Dao;
 
 use Fossology\Lib\Data\AgentRef;
 use Fossology\Lib\Db\DbManager;
-use Fossology\Lib\Util\Object;
 use Monolog\Logger;
 
 /**
  * Class AgentDao
  * @package Fossology\Lib\Dao
  */
-class AgentDao extends Object
+class AgentDao
 {
   const ARS_TABLE_SUFFIX = "_ars";
 
@@ -46,7 +45,8 @@ class AgentDao extends Object
     $this->logger = $logger;
   }
 
-  public function arsTableExists($agentName) {
+  public function arsTableExists($agentName)
+  {
     return $this->dbManager->existsTable($this->getArsTableName($agentName));
   }
 
@@ -63,8 +63,7 @@ class AgentDao extends Object
   {
     $arsTableName = $this->getArsTableName($agentName);
 
-    if ($arsId)
-    {
+    if ($arsId) {
       $successDb = $this->dbManager->booleanToDb($success);
       $parms = array($successDb, $arsId);
 
@@ -74,9 +73,7 @@ class AgentDao extends Object
         $stmt .= ".status";
         $parms[] = $status;
         $statusClause = ", ars_status = $".count($parms);
-      }
-      else
-      {
+      } else {
         $statusClause = "";
       }
 
@@ -86,15 +83,13 @@ class AgentDao extends Object
                   ars_endtime=now() $statusClause
               WHERE ars_pk = $2",
               $parms, $stmt);
-    } else
-    {
+    } else {
       $row = $this->dbManager->getSingleRow(
               "INSERT INTO $arsTableName(agent_fk,upload_fk)
                VALUES ($1,$2) RETURNING ars_pk",
               array($agentId, $uploadId),
               __METHOD__.".update.".$arsTableName);
-      if ($row !== false)
-      {
+      if ($row !== false) {
         return $row['ars_pk'];
       }
     }
@@ -109,8 +104,7 @@ class AgentDao extends Object
       array($agentName), __METHOD__."select"
     );
 
-    if ($row === false)
-    {
+    if ($row === false) {
       $row = $this->dbManager->getSingleRow(
         "INSERT INTO agent(agent_name,agent_desc,agent_rev) VALUES ($1,$2,$3) RETURNING agent_pk",
         array($agentName, $agentDesc, $agentRev), __METHOD__."insert"
@@ -138,31 +132,27 @@ class AgentDao extends Object
    * assoc array of _ars records.
    *         or FALSE on error, or no rows
    */
-  public function agentARSList($tableName, $uploadId, $limit = 1, $agentId = 0, $agentSuccess = TRUE)
+  public function agentARSList($tableName, $uploadId, $limit = 1, $agentId = 0, $agentSuccess = true)
   {
     //based on common-agents.php AgentARSList
-    if (!$this->dbManager->existsTable($tableName))
-    {
+    if (!$this->dbManager->existsTable($tableName)) {
       return false;
     }
 
     $arguments = array($uploadId);
     $statementName = __METHOD__ . $tableName;
     $sql = "SELECT * FROM $tableName, agent WHERE agent_pk=agent_fk AND upload_fk=$1 AND agent_enabled";
-    if ($agentId)
-    {
+    if ($agentId) {
       $arguments[] = $agentId;
       $sql .= ' AND agent_fk=$'.count($arguments);
       $statementName .= ".agent";
     }
-    if ($agentSuccess)
-    {
+    if ($agentSuccess) {
       $sql .= " AND ars_success";
       $statementName .= ".suc";
     }
     $sql .= " ORDER BY agent_ts DESC";
-    if ($limit > 0)
-    {
+    if ($limit > 0) {
       $arguments[] = $limit;
       $sql .= ' limit $'.count($arguments);
       $statementName .= ".lim";
@@ -185,16 +175,13 @@ class AgentDao extends Object
   public function getRunningAgentIds($uploadId, $agentName)
   {
     $arsTableName = $this->getArsTableName($agentName);
-    $listOfAllJobs = $this->agentARSList($arsTableName, $uploadId, 0, 0, FALSE);
+    $listOfAllJobs = $this->agentARSList($arsTableName, $uploadId, 0, 0, false);
 
     $listOfRunningAgents = array();
 
-    if ($listOfAllJobs !== false)
-    {
-      foreach ($listOfAllJobs as $job)
-      {
-        if ($job ['ars_success'] === $this->dbManager->booleanToDb(true) )
-        {
+    if ($listOfAllJobs !== false) {
+      foreach ($listOfAllJobs as $job) {
+        if ($job ['ars_success'] === $this->dbManager->booleanToDb(true)) {
           continue;
         }
         $listOfRunningAgents[] = intval($job['agent_fk']);
@@ -237,8 +224,7 @@ class AgentDao extends Object
             . "ORDER BY agent_pk DESC");
     $res = $this->dbManager->execute($stmt, array($uploadId, $agentName));
     $agents = array();
-    while ($row = $this->dbManager->fetchArray($res))
-    {
+    while ($row = $this->dbManager->fetchArray($res)) {
       $agents[] = $this->createAgentRef($row);
     }
     $this->dbManager->freeResult($res);
@@ -308,4 +294,14 @@ class AgentDao extends Object
     $row = $this->dbManager->getSingleRow("SELECT agent_name FROM agent WHERE agent_enabled AND agent_pk=$1", array($agentId));
     return ($row===false)?false:$row['agent_name'];
   }
-} 
+
+  /**
+   * @param int $agentId
+   * @return string
+   */
+  public function getAgentRev($agentId)
+  {
+    $row = $this->dbManager->getSingleRow("SELECT agent_rev FROM agent WHERE agent_enabled AND agent_pk=$1", array($agentId));
+    return ($row===false)?false:$row['agent_rev'];
+  }
+}

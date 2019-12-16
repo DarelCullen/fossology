@@ -11,11 +11,6 @@ without any warranty.
 
 namespace TestSupport;
 
-/**
- * @var \Composer\Autoload\Classloader
- */
-$classLoader = require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-$hamcrestUtilPath = $classLoader->findFile('\Hamcrest\Util');
-require dirname($hamcrestUtilPath) . '/../Hamcrest.php';
-
+\Hamcrest\Util::registerGlobalFunctions();

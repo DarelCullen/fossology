@@ -23,7 +23,7 @@ use Mockery as M;
 
 require_once(__DIR__ . '/../../../common-dir.php');
 
-class ItemTest extends \PHPUnit_Framework_TestCase
+class ItemTest extends \PHPUnit\Framework\TestCase
 {
   private $id = 234;
   private $parentId = 432;
@@ -37,7 +37,7 @@ class ItemTest extends \PHPUnit_Framework_TestCase
 
   protected function setUp()
   {
-    $this->itemTreeBounds = M::mock(ItemTreeBounds::classname());
+    $this->itemTreeBounds = M::mock(ItemTreeBounds::class);
 
     $this->item = new Item($this->itemTreeBounds, $this->parentId, $this->fileId, $this->fileMode, $this->fileName);
   }
@@ -93,22 +93,25 @@ class ItemTest extends \PHPUnit_Framework_TestCase
     $this->assertFalse($this->item->containsFileTreeItems());
   }
 
-  public function testHasParent() {
+  public function testHasParent()
+  {
     $this->assertTrue($this->item->hasParent());
   }
 
-  public function testHasNoParent() {
-    $this->item = new Item($this->itemTreeBounds, null, $this->fileId, $this->fileMode, $this->fileName);
+  public function testHasNoParent()
+  {
+    $this->item = new Item($this->itemTreeBounds, null, $this->fileId,
+      $this->fileMode, $this->fileName);
     $this->assertFalse($this->item->hasParent());
   }
 
-  public function testIsContainer() {
+  public function testIsContainer()
+  {
     $this->assertFalse($this->item->isContainer());
   }
 
-  public function testIsFile() {
+  public function testIsFile()
+  {
     $this->assertTrue($this->item->isFile());
   }
-
 }
- 

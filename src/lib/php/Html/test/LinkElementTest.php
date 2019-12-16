@@ -19,8 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Html;
 
-
-class LinkElementTest extends \PHPUnit_Framework_TestCase {
+class LinkElementTest extends \PHPUnit\Framework\TestCase
+{
 
   public function testLinkElement()
   {
@@ -29,6 +29,4 @@ class LinkElementTest extends \PHPUnit_Framework_TestCase {
     assertThat($linkElement->getOpeningText(), is("<a href=\"<url>\">"));
     assertThat($linkElement->getClosingText(), is("</a>"));
   }
-
 }
- 

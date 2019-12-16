@@ -20,15 +20,16 @@
 namespace Fossology\Lib\Data;
 
 use Fossology\Lib\Exception;
-use Fossology\Lib\Util\Object;
 
-class Types extends Object {
+class Types
+{
   /** @var array */
   protected $map;
   /** @var string */
   protected $name;
 
-  public function __construct( $name) {
+  public function __construct($name)
+  {
     $this->name = $name;
   }
 
@@ -39,8 +40,7 @@ class Types extends Object {
    */
   function getTypeName($type)
   {
-    if (array_key_exists($type, $this->map))
-    {
+    if (array_key_exists($type, $this->map)) {
       return $this->map[$type];
     }
     throw new \Exception("unknown " . $this->name . " id " . $type);
@@ -61,5 +61,4 @@ class Types extends Object {
   {
     return array_search($name, $this->map);
   }
-
-} 
+}

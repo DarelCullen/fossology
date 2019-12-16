@@ -1,6 +1,6 @@
 /*******************************************************************
  Copyright (C) 2011-2014 Hewlett-Packard Development Company, L.P.
- 
+
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
  version 2 as published by the Free Software Foundation.
@@ -14,6 +14,10 @@
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *******************************************************************/
+/**
+ * \file
+ * \brief Contains global declaration of variables
+ */
 #ifndef UNUNPACK_GLOBALS_H
 #define UNUNPACK_GLOBALS_H
 
@@ -34,6 +38,7 @@ int PruneFiles=0;
 int SetContainerArtifact=1;	/* should initial container be an artifact? */
 FILE *ListOutFile=NULL;
 int ReunpackSwitch=0;
+int IgnoreSCMData=0;
 
 /* for the repository */
 int UseRepository=0;
@@ -98,8 +103,9 @@ cmdlist CMD[] =
 /* 28 */{ "application/x-debian-source","dpkg-source","-x","'%s' >/dev/null 2>&1","",CMD_DEB,1,0177000,0177000, },
 /* 29 */{ "application/x-xz","tar","-JxSf",">/dev/null 2>&1","",CMD_ARC,1,0177000,0177777, },
 /* 30 */{ "application/jar","unzip","-q -P none -o","-x / >/dev/null 2>&1","unzip -Zhzv '%s' > '%s'",CMD_ARC,1,0177000,0177000, },
-/* 31 */{ "application/x-dosexec","7z","x -y -pjunk",">/dev/null 2>&1","",CMD_ARC,1,0177000,0177000, },
-/* 32 */{ "","","",">/dev/null 2>&1","",CMD_DEFAULT,1,0177000,0177000, },
+/* 31 */{ "application/java-archive","unzip","-q -P none -o","-x / >/dev/null 2>&1","unzip -Zhzv '%s' > '%s'",CMD_ARC,1,0177000,0177000, },
+/* 32 */{ "application/x-dosexec","7z","x -y -pjunk",">/dev/null 2>&1","",CMD_ARC,1,0177000,0177000, },
+/* 33 */{ "","","",">/dev/null 2>&1","",CMD_DEFAULT,1,0177000,0177000, },
   { NULL,NULL,NULL,NULL,NULL,-1,-1,0177000,0177000, },
 };
 #endif

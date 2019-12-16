@@ -22,10 +22,9 @@ namespace Fossology\Lib\Dao;
 use Fossology\Lib\Data\Package\Package;
 use Fossology\Lib\Data\Upload\Upload;
 use Fossology\Lib\Db\DbManager;
-use Fossology\Lib\Util\Object;
 use Monolog\Logger;
 
-class PackageDao extends Object
+class PackageDao
 {
 
   /** @var DbManager */
@@ -60,8 +59,7 @@ ORDER BY up2.upload_fk ASC");
     $packageId = 0;
     $packageName = "";
     $uploads = array();
-    while ($row = $this->dbManager->fetchArray($res))
-    {
+    while ($row = $this->dbManager->fetchArray($res)) {
       $packageId = intval($row['package_pk']);
       $packageName = $row['package_name'];
       $uploads[] = Upload::createFromTable($row);
@@ -96,5 +94,4 @@ ORDER BY up2.upload_fk ASC");
     $res = $this->dbManager->execute($statementName, array($package->getId(), $uploadId));
     $this->dbManager->freeResult($res);
   }
-
-} 
+}

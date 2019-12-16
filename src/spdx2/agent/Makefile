@@ -14,7 +14,7 @@ MOD_NAME = spdx2
 MOD_SUBDIR = agent
 MOD_NAMES = spdx2 spdx2tv dep5
 
-EXE=spdx2.php version.php services.php
+EXE=spdx2.php version.php services.php spdx2utils.php
 
 all: version.php spdx2
 
@@ -34,7 +34,7 @@ install: all
 	done
 	for file in $(EXE); do \
 		echo "installing $$file"; \
-		$(INSTALL_PROGRAM) $$file $(DESTDIR)$(MODDIR)/$(MOD_NAME)/$(MOD_SUBDIR)/$$file; \
+		$(INSTALL_DATA) $$file $(DESTDIR)$(MODDIR)/$(MOD_NAME)/$(MOD_SUBDIR)/$$file; \
 	done
 	echo "Making wrapper for $(MOD_NAME)"
 	ln -sf $(LIBEXECDIR)/fo_wrapper  $(DESTDIR)$(MODDIR)/$(MOD_NAME)/agent/$(MOD_NAME)

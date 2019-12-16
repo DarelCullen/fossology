@@ -18,8 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 namespace Fossology\Lib\Text;
 
-
-class EncodingConverterTest extends \PHPUnit_Framework_TestCase
+class EncodingConverterTest extends \PHPUnit\Framework\TestCase
 {
 
   private $testString = "äöüßÄÖÜ";
@@ -62,6 +61,4 @@ class EncodingConverterTest extends \PHPUnit_Framework_TestCase
     assertThat( $outputString, startsWith($this->testString));
     assertThat( strlen($outputString), is(greaterThan(2 * strlen($this->testString))));
   }
-
 }
- 

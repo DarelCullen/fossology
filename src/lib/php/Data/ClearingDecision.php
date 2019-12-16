@@ -1,6 +1,6 @@
 <?php
 /*
-Copyright (C) 2014-2015, Siemens AG
+Copyright (C) 2014-2018, Siemens AG
 Author: Johannes Najjar, Steffen Weber
 
 This program is free software; you can redistribute it and/or
@@ -21,9 +21,8 @@ namespace Fossology\Lib\Data;
 
 use Fossology\Lib\Data\Clearing\ClearingEvent;
 use Fossology\Lib\Data\Clearing\ClearingLicense;
-use Fossology\Lib\Util\Object;
 
-class ClearingDecision extends Object
+class ClearingDecision
 {
   /** @var bool */
   private $sameFolder;
@@ -45,6 +44,8 @@ class ClearingDecision extends Object
   private $comment;
   /** @var string */
   private $reportinfo;
+  /** @var string */
+  private $acknowledgement;
   /** @var int */
   private $scope;
   /** @var int */
@@ -63,10 +64,10 @@ class ClearingDecision extends Object
    * @param ClearingEvent[] $clearingEvents
    * @param string $comment
    * @param string $reportinfo
+   * @param string $acknowledgement
    * @internal param $licenses
    */
-  public function __construct($sameFolder, $clearingId, $uploadTreeId, $pfileId, $userName, $userId, $type,
-          $scope, $ts_added, $clearingEvents, $comment = "", $reportinfo = "")
+  public function __construct($sameFolder, $clearingId, $uploadTreeId, $pfileId, $userName, $userId, $type, $scope, $ts_added, $clearingEvents, $comment = "", $reportinfo = "", $acknowledgement = "")
   {
     $this->sameFolder = $sameFolder;
     $this->clearingId = $clearingId;
@@ -79,6 +80,7 @@ class ClearingDecision extends Object
     $this->timeStamp = $ts_added;
     $this->comment = $comment;
     $this->reportinfo = $reportinfo;
+    $this->acknowledgement = $acknowledgement;
     $this->clearingEvents = $clearingEvents;
   }
 
@@ -112,7 +114,7 @@ class ClearingDecision extends Object
   public function getClearingLicenses()
   {
     $clearingLicenses = array();
-    foreach($this->clearingEvents as $clearingEvent) {
+    foreach ($this->clearingEvents as $clearingEvent) {
       $clearingLicenses[] = $clearingEvent->getClearingLicense();
     }
     return $clearingLicenses;
@@ -124,11 +126,9 @@ class ClearingDecision extends Object
   public function getPositiveLicenses()
   {
     $result = array();
-    foreach($this->clearingEvents as $clearingEvent)
-    {
+    foreach ($this->clearingEvents as $clearingEvent) {
       $clearingLicense = $clearingEvent->getClearingLicense();
-      if (!$clearingLicense->isRemoved())
-      {
+      if (! $clearingLicense->isRemoved()) {
         $result[] = $clearingLicense->getLicenseRef();
       }
     }
@@ -158,6 +158,14 @@ class ClearingDecision extends Object
   public function getReportinfo()
   {
     return $this->reportinfo;
+  }
+
+  /**
+   * @return string
+   */
+  public function getAcknowledgement()
+  {
+    return $this->acknowledgement;
   }
 
   /**
@@ -213,10 +221,11 @@ class ClearingDecision extends Object
    */
   public function isInScope()
   {
-    switch ($this->getScope())
-    {
-      case 'global': return true;
-      case 'upload': return $this->sameFolder;
+    switch ($this->getScope()) {
+      case 'global':
+        return true;
+      case 'upload':
+        return $this->sameFolder;
     }
     return false;
   }
@@ -226,10 +235,9 @@ class ClearingDecision extends Object
     $output = "ClearingDecision(#" . $this->clearingId . ", ";
 
     foreach ($this->clearingLicenses as $clearingLicense) {
-      $output .= ($clearingLicense->isRemoved() ? "-": "" ). $clearingLicense->getShortName() . ", ";
+      $output .= ($clearingLicense->isRemoved() ? "-" : ""). $clearingLicense->getShortName() . ", ";
     }
 
     return $output . $this->getUserName() . ")";
   }
-
 }

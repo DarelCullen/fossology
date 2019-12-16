@@ -34,7 +34,10 @@
           {% block rhs %}
             {% include 'ui-xp-view_rhs.html.twig' %}
           {% endblock %}
-          {{ content }}
+          {% if content %}
+            <h3 style="padding-top: 1.3em;">Scanner findings:</h3>
+            {{ content }}
+          {%endif%}
         </td>
       </tr>
     </table>
@@ -45,6 +48,7 @@
 
   <script src="scripts/jquery.dataTables.min.js" type="text/javascript"></script>
   <script src="scripts/jquery.dataTables.editable.js" type="text/javascript"></script>
+  <script src="scripts/jquery.dataTables.select.js" type="text/javascript"></script>
   <script src="scripts/jquery.jeditable.js" type="text/javascript"></script>
   <script src="scripts/jquery.validate.js" type="text/javascript"></script>
   <script src="scripts/jquery.plainmodal.min.js" type="text/javascript"></script>
@@ -57,11 +61,24 @@
   <script type="text/javascript">{% include "next-options.js.twig" %}</script>
 
   {{ script }}
-  
-  {% include "copyrighthist_scripts.html.twig" %}
-  <script language="javascript">
-  {% set table=statement %}
-  {% include "histTable.js.twig" with table %}
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      $('img').tooltip();
+      $('#decisionTable').DataTable({
+        "paging":   false,
+        "ordering": false,
+        "info":     false,
+      });
+    });
   </script>
+
+  {% include "copyrighthist_scripts.html.twig" %}
+  {% if agentName == "copyright" %}
+    <script language="javascript">
+    {% set table=statement %}
+    {% include "histTable.js.twig" with table %}
+    </script>
+  {%endif%}
 {% endblock %}
 

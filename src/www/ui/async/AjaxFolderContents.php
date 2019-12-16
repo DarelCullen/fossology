@@ -20,6 +20,7 @@ namespace Fossology\UI\Ajax;
 
 use Fossology\Lib\Auth\Auth;
 use Fossology\Lib\Dao\FolderDao;
+use Fossology\Lib\Data\UploadStatus;
 use Fossology\Lib\Plugin\DefaultPlugin;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -42,27 +43,30 @@ class AjaxFolderContents extends DefaultPlugin
     $folderDao = $this->getObject('dao.folder');
     $results = array();
     $childFolders = $folderDao->getFolderChildFolders($folderId);
-    foreach($childFolders as $folder)
-    {
+    foreach ($childFolders as $folder) {
       $results[$folder['foldercontents_pk']] = '/'.$folder['folder_name'];
     }
     $childUploads = $folderDao->getFolderChildUploads($folderId, Auth::getGroupId());
-    foreach($childUploads as $upload)
-    {
-      $results[$upload['foldercontents_pk']] = $upload['upload_filename'];
+    foreach ($childUploads as $upload) {
+      $uploadStatus = new UploadStatus();
+      $uploadDate = explode(".",$upload['upload_ts'])[0];
+      $uploadStatus = " (" . $uploadStatus->getTypeName($upload['status_fk']) . ")";
+      $results[$upload['foldercontents_pk']] = $upload['upload_filename'] . _(" from ") . $uploadDate . $uploadStatus;
     }
-    if(!$request->get('removable'))
-    {
+
+    if (!$request->get('removable')) {
       return new JsonResponse($results);
     }
-    
+
     $filterResults = array();
-    foreach($folderDao->getRemovableContents($folderId) as $content)
-    {
+    foreach ($folderDao->getRemovableContents($folderId) as $content) {
       $filterResults[$content] = $results[$content];
+    }
+    if (empty($filterResults)) {
+      $filterResults["-1"] = "No removable content found";
     }
     return new JsonResponse($filterResults);
   }
-  
 }
+
 register_plugin(new AjaxFolderContents());

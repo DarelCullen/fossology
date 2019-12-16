@@ -1,16 +1,16 @@
 /*
- Copyright (C) 2014-2015, Siemens AG
- Author: Daniele Fognini, Johannes Najjar, Steffen Weber 
- 
+ Copyright (C) 2014-2018, Siemens AG
+ Author: Daniele Fognini, Johannes Najjar, Steffen Weber
+
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
  version 2 as published by the Free Software Foundation.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License along
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -25,8 +25,9 @@ var noLicenseString = "No_license_found";
 function jsArrayFromHtmlOptions(pListBox) {
   var options = new Array(pListBox.options.length);
   for (var i = 0; i < options.length; i++) {
-    if (pListBox.options[i].value === magicNumberNoLicenseFound)
+    if (pListBox.options[i].value === magicNumberNoLicenseFound) {
       continue;
+    }
     options[i] = pListBox.options[i];
   }
   return options;
@@ -34,18 +35,21 @@ function jsArrayFromHtmlOptions(pListBox) {
 
 function htmlOptionsFromJsArray(pListBox, options) {
   pListBox.options.length = 0;
-  if(options===undefined) return;
+  if(options===undefined) { return;
+  }
   for (var i = 0; i < options.length; i++) {
-      if(options[i]===undefined) continue;
+    if(options[i]===undefined) { continue;
+    }
       pListBox.options[i] = options[i];
   }
 }
 
-function sortList(pListBox) {
+function sortLicenseList(pListBox) {
   var options = jsArrayFromHtmlOptions(pListBox);
   options.sort(compareText);
-  if (options.length == 0)
+  if (options.length == 0) {
     options[0] = (new Option(noLicenseString, magicNumberNoLicenseFound));
+  }
   htmlOptionsFromJsArray(pListBox, options);
 }
 
@@ -55,15 +59,15 @@ function compareText(opt1, opt2) {
 
 function moveLicense(theSelFrom, theSelTo) {
   var selLength = theSelFrom.length;
-  var i;
-  for (i = selLength - 1; i >= 0; i--) {
+  for (var i = selLength - 1; i >= 0; i--) {
     if (theSelFrom.options[i].selected) {
       theSelTo.appendChild(theSelFrom.options[i].cloneNode(true));
       theSelFrom[i] = null;
     }
   }
-  sortList(theSelFrom);
-  sortList(theSelTo);
+
+  sortLicenseList(theSelFrom);
+  sortLicenseList(theSelTo);
 }
 
 
@@ -109,10 +113,42 @@ function scheduledDeciderError (responseobject, resultEntity) {
   resultEntity.show();
 }
 
+function isUserError(bulkActions, refText) {
+    var errorText = "";
+  if(bulkActions.length < 1) {
+      errorText += "No licenses to bulk scan selected\n";
+  }
+
+  if(refText.trim().split(" ").length < 2) {
+      errorText += "Reference text needs to be at least 2 words long"
+  }
+
+    //show errors to user
+  if(errorText.length > 0) {
+    alert("Bulk scan not scheduled: \n\n"+errorText);
+    return true;
+  }
+    return false;
+}
+
 function scheduleBulkScanCommon(resultEntity, callbackSuccess) {
+  var bulkActions = getBulkFormTableContent();
+  var refText = $('#bulkRefText').val();
+  var i;
+  for (i = 0; i < bulkActions.length; i++) {
+    bulkActions[i]["reportinfo"] = $("#"+bulkActions[i].licenseId+"reportinfoBulk").attr('title');
+    bulkActions[i]["acknowledgement"] = $("#"+bulkActions[i].licenseId+"acknowledgementBulk").attr('title');
+    bulkActions[i]["comment"] = $("#"+bulkActions[i].licenseId+"commentBulk").attr('title');
+  }
+
+  //checks for user errors
+  if(isUserError(bulkActions, refText)) {
+    return;
+  }
+  
   var post_data = {
-    "bulkAction": getBulkFormTableContent(),
-    "refText": $('#bulkRefText').val(),
+    "bulkAction": bulkActions,
+    "refText": refText,
     "bulkScope": $('#bulkScope').val(),
     "uploadTreeId": $('#uploadTreeId').val(),
     "forceDecision": $('#forceDecision').is(':checked')?1:0
@@ -151,7 +187,6 @@ function performPostRequestCommon(resultEntity, callbackSuccess) {
   });
 
 }
-
 
 function popUpLicenseText(popUpUri, title) {
   sel = $("#bulkLicense :selected").val();
@@ -198,4 +233,141 @@ function removeMainLicense(uploadId,licenseId) {
       })
       .fail(failed);
   }
+}
+function openTextModel(uploadTreeId, licenseId, what, type) {
+  if(type === undefined) {
+    type = 0;
+  }
+  if(type == 0) {
+    let clearingsForSingleFile = $("#clearingsForSingleFile"+licenseId+what).attr("title");
+    idLicUploadTree = uploadTreeId+','+licenseId;
+    whatCol = what;
+    $("#referenceText").val(clearingsForSingleFile);
+    if (what == 4 || what == "comment") {
+      createDropDown($("#textModal > form > div"), $("#referenceText"));
+    } else {
+      $("#licenseStdCommentDropDown-text").hide();
+      $("#licenseStdCommentDropDown").next(".select2-container").hide();
+    }
+    textModal.plainModal('open');
+  } else {
+    $("#referenceText").val($("#"+licenseId+what+type).attr('title'));
+    whatCol = what;
+    whatLicId = licenseId;
+    if (what == 4 || what == "comment") {
+      createDropDown($("#textModal > form > div"), $("#referenceText"));
+    } else {
+      $("#licenseStdCommentDropDown-text").hide();
+      $("#licenseStdCommentDropDown").next(".select2-container").hide();
+    }
+    textModal.plainModal('open');
+  }
+  whatType = type;
+}
+
+function closeTextModal() {
+  textModal.plainModal('close');
+}
+
+function submitTextModal(){
+  if(whatType == 0) {
+    var post_data = {
+      "id": idLicUploadTree,
+      "columnId": whatCol,
+      "value": $("#referenceText").val()
+    };
+    $.ajax({
+      type: "POST",
+      url: "?mod=conclude-license&do=updateClearings",
+      data: post_data,
+      success: doOnSuccess
+    });
+  } else {
+    textModal.plainModal('close');
+    $("#"+ whatLicId + whatCol +"Bulk").attr('title', $("#referenceText").val());
+    referenceText = $("#referenceText").val().trim();
+    if(referenceText !== null && referenceText !== '') {
+      $("#"+ whatLicId + whatCol + whatType).html($("#"+ whatLicId + whatCol + whatType).attr('title').slice(0, 10) + "...");
+    } else {
+      $("#"+ whatLicId + whatCol +"Bulk").attr('title','');
+    }
+  }
+}
+
+function doOnSuccess() {
+  textModal.plainModal('close');
+  $('#decTypeSet').addClass('decTypeWip');
+  oTable = $('#licenseDecisionsTable').dataTable(selectedLicensesTableConfig).makeEditable(editableConfiguration);
+  oTable.fnDraw(false);
+}
+$(document).ready(function () {
+  textModal = $('#textModal').plainModal();
+  $('#textModal').draggable({
+    stop: function(){
+      $(this).css({'width':'','height':''});
+    }
+  });
+});
+
+function createDropDown(element, textBox) {
+  let dropDown = null;
+  if ($("#licenseStdCommentDropDown").length) {
+    // The dropdown already exists
+    $("#licenseStdCommentDropDown-text").show();
+    dropDown = $("#licenseStdCommentDropDown");
+    dropDown.val(null).trigger('change');
+    dropDown.next(".select2-container").show();
+    return;
+  }
+  dropDown = $("<select />", {
+    "id": "licenseStdCommentDropDown",
+    "class": "ui-render-select2"
+  }).on("select2:select", function(e) {
+    let id = e.params.data.id;
+    getStdLicenseComments(id, function (comment) {
+      if (comment.hasOwnProperty("error")) {
+        console.log("Error while fetching standard comments: " + comment.error);
+      } else {
+        textBox.val(textBox.val() + "\n" + comment.comment);
+      }
+    });
+  });
+  dropDown.insertBefore(element);
+  $("<p />", {
+    "id": "licenseStdCommentDropDown-text"
+  }).html("Select standard license comments:").insertBefore(dropDown);
+  getStdLicenseComments("visible", function (data) {
+    // Add a placeholder for select2
+    data.splice(0, 0, {
+      "lsc_pk": -1,
+      "name": ""});
+    dropDown.select2({
+      selectOnClose: true,
+      dropdownParent: textModal,
+      placeholder: {
+        id: '-1',
+        text: "Select a comment"
+      },
+      data: $.map(data, function(obj) {
+        return {
+          "id": obj.lsc_pk,
+          "text": obj.name
+        };
+      })
+    });
+  });
+}
+
+function getStdLicenseComments(scope, callback) {
+  $.ajax({
+    type: "GET",
+    url: "?mod=ajax_license_std_comments",
+    data: {"scope": scope},
+    success: function(data) {
+      callback(data);
+    },
+    error: function(data) {
+      callback(data.error);
+    }
+  });
 }

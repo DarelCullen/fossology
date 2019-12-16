@@ -1,8 +1,7 @@
 <?php
-
-use Fossology\Lib\Auth\Auth;
 /***********************************************************
  Copyright (C) 2013 Hewlett-Packard Development Company, L.P.
+ Copyright (C) 2019 Siemens AG
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License
@@ -18,10 +17,12 @@ use Fossology\Lib\Auth\Auth;
  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ***********************************************************/
 
-define("TITLE_maintagent", _("FOSSology Maintenance"));
+define("TITLE_MAINTAGENT", _("FOSSology Maintenance"));
+
+use Fossology\Lib\Auth\Auth;
 
 /**
- * \class maintagent extend from FO_Plugin
+ * \class maintagent
  * \brief Queue the maintenance agent with the requested parameters
  */
 class maintagent extends FO_Plugin {
@@ -29,18 +30,16 @@ class maintagent extends FO_Plugin {
   public function __construct()
   {
     $this->Name = "maintagent";
-    $this->Title = TITLE_maintagent;
+    $this->Title = TITLE_MAINTAGENT;
     $this->MenuList = "Admin::Maintenance";
     $this->DBaccess = PLUGIN_DB_ADMIN;
     parent::__construct();
   }
-  
+
   /**
-   * \brief queue the job
-   *
-   * \param
-   * \returns status string
-   **/
+   * \brief Queue the job
+   * \returns string Status string
+   */
   function QueueJob()
   {
     global $SysConf;
@@ -50,8 +49,9 @@ class maintagent extends FO_Plugin {
      */
     $options = "-";
     foreach ($_REQUEST as $key => $value) {
-      if ($key == $value)
+      if ($key == $value) {
         $options .= $value;
+      }
     }
 
     /* Create the maintenance job */
@@ -59,14 +59,17 @@ class maintagent extends FO_Plugin {
     $groupId = Auth::getGroupId();
 
     $job_pk = JobAddJob($user_pk, $groupId, "Maintenance");
-    if (empty($job_pk) || ($job_pk < 0)) return _("Failed to insert job record");
+    if (empty($job_pk) || ($job_pk < 0)) { return _("Failed to insert job record");
+    }
 
     $jq_pk = JobQueueAdd($job_pk, "maintagent", NULL, NULL, NULL, NULL, $options);
-    if (empty($jq_pk)) return _("Failed to insert task 'Maintenance' into job queue");
+    if (empty($jq_pk)) { return _("Failed to insert task 'Maintenance' into job queue");
+    }
 
     /* Tell the scheduler to check the queue. */
     $success  = fo_communicate_with_scheduler("database", $output, $error_msg);
-    if (!$success) return($error_msg . "\n" . $output);
+    if (!$success) { return($error_msg . "\n" . $output);
+    }
 
     return _("The maintenance job has been queued");
   }
@@ -74,10 +77,8 @@ class maintagent extends FO_Plugin {
 
   /**
    * \brief Display the input form
-   *
-   * \param
-   * \returns HTML in string
-   **/
+   * \returns string HTML in string
+   */
   function DisplayForm()
   {
     /* Array of maintagent options and description */
@@ -85,6 +86,7 @@ class maintagent extends FO_Plugin {
                      "A"=>_("Run all maintenance operations."),
                      "F"=>_("Validate folder contents."),
               //       "g"=>_("Remove orphaned gold files."),
+                     "E"=>_("Remove orphaned rows from database."),
                      "N"=>_("Normalize priority "),
               //       "p"=>_("Verify file permissions (report only)."),
               //       "P"=>_("Verify and fix file permissions."),
@@ -93,6 +95,7 @@ class maintagent extends FO_Plugin {
                      "D"=>_("Vacuum Analyze the database."),
               //       "U"=>_("Process expired uploads (slow)."),
               //       "Z"=>_("Remove orphaned files from the repository (slow)."),
+                     "I"=>_("Reindexing of database (This activity may take 5-10 mins. Execute only when system is not in use)."),
                      "v"=>_("verbose (turns on debugging output)")
                     );
     $V = "";
@@ -122,6 +125,10 @@ class maintagent extends FO_Plugin {
   }
 
 
+  /**
+   * @copydoc FO_Plugin::Output()
+   * @see FO_Plugin::Output()
+   */
   public function Output()
   {
     $V = "";
